@@ -103,9 +103,9 @@
     "repo": "alist",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
-    "version": "beta"
+    "version": "v3.35.0"
   },
   {
     "owner": "dolthub",
