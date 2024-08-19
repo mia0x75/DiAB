@@ -20,10 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     name: "process dispatch"
     outputs:
-      status: ${{ steps.check-repo-dispatch.outputs.status }}
+      status: ${{ steps.process.outputs.status }}
       version: ${{ steps.process.outputs.version }}
     steps:
       - name: check-repo-dispatch
+        id: process
         run: |
           if [ "${{ env.GITHUB_REPO }}" = "${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}" ]; then
             echo "status=success" >> $GITHUB_OUTPUT
