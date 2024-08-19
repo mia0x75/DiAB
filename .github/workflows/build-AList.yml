@@ -21,11 +21,13 @@ jobs:
     name: "process dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
+      version: ${{ steps.process.outputs.version }}
     steps:
       - name: check-repo-dispatch
         run: |
           if [ "${{ env.GITHUB_REPO }}" = "${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}" ]; then
             echo "status=success" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
           else
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
@@ -42,7 +44,6 @@ jobs:
       src_cmd_pkg: ${{ steps.get-version.outputs.src_cmd_pkg }}
       go_version: ${{ steps.get-version.outputs.go_version }}
       build_date: ${{ steps.get-version.outputs.build_date }}
-      tag: ${{ steps.get-version.outputs.tag }}
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -52,9 +53,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/releases" | awk -F '"' '/tag_name/{print $(NF-1)}')
-          LATEST_TAG=$(grep -vm1 '-' <<< "$LIST")
-          LATEST_VERSION=$(echo $LATEST_TAG | sed 's/^\w\+\///g')
+          LATEST_VERSION=${{ needs.process-dispatch.outputs.version }}
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
           
           SRC_CMD_PKG="github.com/alist-org/alist/v3/internal/"
@@ -67,7 +66,6 @@ jobs:
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "src_cmd_pkg=$SRC_CMD_PKG" >> $GITHUB_OUTPUT
-          echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
 
@@ -148,7 +146,6 @@ jobs:
       VERSION: ${{ needs.check-version.outputs.version }}
       GO_VERSION: ${{ needs.check-version.outputs.go_version }}
       BUILD_DATE: ${{ needs.check-version.outputs.build_date }}
-      TAG: ${{ needs.check-version.outputs.tag }}
       MSG: ${{ needs.check-version.outputs.commit }}
 
     strategy:
