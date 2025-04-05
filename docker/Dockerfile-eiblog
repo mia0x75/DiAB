@@ -16,17 +16,16 @@ RUN set -ex \
   esac \
   && case "$TARGETARCH" in \
     "amd64") \
-        GCC="gcc" \
+        apk add gcc \
     ;; \
     "arm64") \
-        GCC="gcc-aarch64-linux-musl" \
+        apk add gcc-aarch64-linux-musl \
     ;; \
     *) \
         echo "ERROR: Unsupported CPU architecture: ${TARGETARCH}"; \
         exit 1 \
     ;; \
   esac \
-  && apk add ${GCC} \
   && git clone -b $BRANCH --single-branch https://github.com/eiblog/eiblog /go/src/github.com/eiblog/eiblog \
   && go build -tags prod -ldflags '-extldflags "-static"' -o eiblog "./cmd/eiblog" \
   && upx --best --lzma /go/src/github.com/eiblog/eiblog/eiblog \
