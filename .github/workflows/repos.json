@@ -6,7 +6,7 @@
     "type": 1,
     "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
-    "version": "v2.2.16"
+    "version": "v2.2.15"
   },
   {
     "owner": "SagerNet",

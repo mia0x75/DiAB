@@ -35,11 +35,7 @@ RUN set -ex \
   && go build -v -trimpath -ldflags "--extldflags '-static -fpic' -w -s" -o eiblog ./cmd/eiblog \
   && upx --best --lzma eiblog \
   && mkdir -p /app \
-  && cp eiblog /app \
-  && cp -R conf /app/conf \
-  && cp -R assets /app/assets \
-  && cp -R website /app/website \
-  && rm -f /app/conf/README.md /app/assets/README.md /app/website/README.md
+  && cp eiblog /app
 
 # 第二阶段：运行（使用目标平台的最小化镜像）
 FROM --platform=$TARGETPLATFORM alpine AS dist
