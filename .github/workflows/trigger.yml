@@ -21,7 +21,7 @@ jobs:
         id: check-releases
         run: |
           repos=$(cat .github/workflows/repos.json  | jq -c '.[]')
-          
+
           for repo in $repos; do
             owner=$(echo $repo | jq -r '.owner')
             name=$(echo $repo | jq -r '.repo')
@@ -30,7 +30,8 @@ jobs:
             replace=$(echo $repo | jq -r '.replace')
             type=$(echo $repo | jq -r '.type')
             current=$(echo $repo | jq -r '.version')
-                        
+            latest=""
+
             case ${type} in 
               1) url="https://api.github.com/repos/${owner}/${name}/releases"
                 key_name="tag_name"
@@ -52,8 +53,9 @@ jobs:
               # 遍历 list 中的每一行
               while IFS= read -r element; do
                 if echo "$element" | grep -Eq "$test"; then
-                  latest=$element
-                  break
+                  if [ -z "$latest" ] || [[ "$element" > "$latest" ]]; then
+                    latest=$element
+                  fi
                 fi
               done <<< "$list"
             else
@@ -76,7 +78,7 @@ jobs:
               continue
             fi
 
-            if [ "$latest" != "$current" ]; then
+            if [ -n "$latest" ] && [ "$latest" != "$current" ]; then
               echo "owner=${owner}" >> $GITHUB_OUTPUT
               echo "repo=${name}" >> $GITHUB_OUTPUT
               echo "alias=${alias}" >> $GITHUB_OUTPUT

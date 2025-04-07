@@ -13,7 +13,7 @@
     "repo": "sing-box",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v1.11.6"
   },
@@ -22,7 +22,7 @@
     "repo": "clash2sfa",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.15.0"
   },
@@ -31,7 +31,7 @@
     "repo": "ddns-go",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v6.9.1"
   },
@@ -49,7 +49,7 @@
     "repo": "subconverter",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.9.0"
   },
@@ -58,7 +58,7 @@
     "repo": "overtls",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.2.41"
   },
@@ -67,7 +67,7 @@
     "repo": "xboard",
     "alias": "",
     "type": 2,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.1.9"
   },
@@ -85,7 +85,7 @@
     "repo": "CloudflareSpeedTest",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v2.2.5"
   },
@@ -94,7 +94,7 @@
     "repo": "OpenGFW",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.4.1"
   },
@@ -121,7 +121,7 @@
     "repo": "dolt",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v1.51.1"
   },
@@ -139,7 +139,7 @@
     "repo": "server",
     "alias": "gotify",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v2.6.1"
   },
@@ -148,7 +148,7 @@
     "repo": "sftpgo",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v2.6.6"
   },
@@ -166,7 +166,7 @@
     "repo": "ghostunnel",
     "alias": "Ghostunnel",
     "type": 2,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v1.8.4"
   },
@@ -175,7 +175,7 @@
     "repo": "proxify",
     "alias": "Proxify",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v0.0.15"
   },
@@ -184,7 +184,7 @@
     "repo": "hiddify-core",
     "alias": "hiddify",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v3.1.8"
   },
@@ -193,7 +193,7 @@
     "repo": "mediamtx",
     "alias": "",
     "type": 1,
-    "test": "",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v1.11.3"
   }
