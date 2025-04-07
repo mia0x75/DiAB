@@ -53,7 +53,7 @@ jobs:
               # 遍历 list 中的每一行
               while IFS= read -r element; do
                 if echo "$element" | grep -Eq "$test"; then
-                  if [ -z "$latest" ] || [[ "$element" > "$latest" ]]; then
+                  if [ -z "$latest" ] || [ "$(printf "%s\n%s" "$element" "$latest" | sort -V | tail -n1)" = "$element" ]; then
                     latest=$element
                   fi
                 fi
