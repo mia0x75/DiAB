@@ -3,7 +3,7 @@
     "owner": "eiblog",
     "repo": "eiblog",
     "alias": "",
-    "type": 1,
+    "type": 2,
     "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v2.2.16"
@@ -111,7 +111,7 @@
     "owner": "alist-org",
     "repo": "alist",
     "alias": "",
-    "type": 1,
+    "type": 2,
     "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
     "version": "v3.44.0"
