@@ -32,7 +32,9 @@ RUN set -ex \
   && echo -e "Building overtls for ${CARGO_TARGET} ...\n" \
   && apk add --no-cache git build-base upx ca-certificates bash openssl curl \
   && cargo install cbindgen \
-  && wget -qO- "https://musl.cc/${MUSL}-cross.tgz" | tar -xzC /root/ \
+  && wget -q "https://musl.cc/${MUSL}-cross.tgz" -O "${MUSL}-cross.tgz" \
+  && tar -xzf "${MUSL}-cross.tgz" -C /root/ \
+  && rm "${MUSL}-cross.tgz" \
   && export PATH="/root/${MUSL}-cross/bin:${PATH}" \
   && export CC="/root/${MUSL}-cross/bin/${MUSL}-gcc" \
   && rustup target add ${CARGO_TARGET} \
