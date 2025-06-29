@@ -60,7 +60,7 @@
     "type": 1,
     "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
-    "version": "v0.2.42"
+    "version": "v0.2.43"
   },
   {
     "owner": "cedar2025",
