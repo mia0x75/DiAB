@@ -87,6 +87,7 @@ jobs:
     needs: check-version
     runs-on: ubuntu-latest
     name: "build docker image"
+    if: false
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
