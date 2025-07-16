@@ -20,7 +20,7 @@ RUN set -ex \
      -buildid= \
      -w -s " \
   && tags="with_gvisor,with_quic,with_wireguard,with_ech,with_utls,with_clash_api,with_grpc,with_dhcp,with_low_memory,with_conntrack" \
-  && go build -v -trimpath -ldflags "--extldflags '-static -fpic' $ldflags" -tags=$tags -o /release/app/hiddify ./cli/ \
+  && go build -v -trimpath -ldflags "--extldflags '-static -fpic' $ldflags" -tags=$tags -o /release/app/hiddify ./cmd/main \
   && upx --lzma /release/app/hiddify \
   && cp docker/hiddify.json /release/app
 
