@@ -3,7 +3,7 @@ name: "trigger"
 on:
   workflow_dispatch:
   schedule:
-    - cron: '* */1 * * *'
+    - cron: '* */3 * * *'
 
 jobs:
   check-repos:
@@ -119,5 +119,5 @@ jobs:
           repository: ${{ github.repository }}
           delete_workflow_pattern: "trigger"
           retain_days: 5
-          keep_minimum_runs: 24
+          keep_minimum_runs: 72
           delete_run_by_conclusion_pattern: "cancelled, skipped, success"
