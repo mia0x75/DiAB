@@ -197,6 +197,8 @@ jobs:
           mkdir release
           ls target/${{ matrix.target }}/release -lah
           upx -V
+          mv target/${{ matrix.target }}/release/overtls-bin target/${{ matrix.target }}/release/overtls
+          upx --best --lzma target/${{ matrix.target }}/release/overtls
           zip -j release/${{ matrix.artifact_name }} target/${{ matrix.target }}/release/overtls ./config.json ./overtls.h target/${{ matrix.target }}/release/libovertls.so
 
       - name: upload binaries
