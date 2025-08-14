@@ -195,7 +195,7 @@ jobs:
           fi
           cbindgen -c cbindgen.toml -l C --cpp-compat -o ./overtls.h
           mkdir release
-          ls -lah
+          ls target/${{ matrix.target }}/release -lah
           upx -V
           zip -j release/${{ matrix.artifact_name }} target/${{ matrix.target }}/release/overtls ./config.json ./overtls.h target/${{ matrix.target }}/release/libovertls.so
 
