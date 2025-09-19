@@ -170,7 +170,7 @@ jobs:
       - name: initialize environment
         run: |
           sudo apt-get -qq update --fix-missing
-          sudo apt-get install -y build-essential git upx musl-dev musl-tools
+          sudo apt-get install -y build-essential git upx musl-dev musl-tools libicu-dev
 
       - name: set up cross-compile environment
         run: |
