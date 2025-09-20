@@ -177,7 +177,18 @@ jobs:
           curl -L -o ${{ matrix.musl }} "https://musl.nn.ci/${{ matrix.musl }}"
           sudo tar xf ${{ matrix.musl }} --strip-components 1 -C /usr/local
           rm -f ${{ matrix.musl }}
-
+      - name: Build ICU for ${{ matrix.goarch }}
+        run: |
+          ICU_VERSION=74.2
+          curl -LO https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION//./-}/icu4c-${ICU_VERSION//./_}-src.tgz
+          tar xzf icu4c-${ICU_VERSION//./_}-src.tgz
+          cd icu/source
+          ./configure --prefix=/opt/icu --host=${{ matrix.goarch }}-linux-musl --enable-static --disable-shared
+          make -j$(nproc)
+          make install
+          echo "CGO_CFLAGS=-I/opt/icu/include" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=-L/opt/icu/lib -licuuc -licui18n -licudata" >> $GITHUB_ENV
+    
       - name: clone repository
         run: |
           git clone https://github.com/dolthub/dolt dolthub/dolt
