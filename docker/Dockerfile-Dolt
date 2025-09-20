@@ -9,7 +9,7 @@ RUN set -ex \
   && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
   && apk update \
   && apk upgrade \
-  && apk add --no-cache git build-base gcc make tzdata musl-dev upx ca-certificates bash openssl curl xz aria2 \
+  && apk add --no-cache git build-base gcc make tzdata musl-dev upx ca-certificates bash openssl curl xz aria2 icu-dev \
   && case "$TARGETOS" in \
       "linux") ;; \
       *) echo "ERROR: Unsupported OS: ${TARGETOS}"; exit 1 ;; \
