@@ -117,15 +117,6 @@
     "version": "v3.53.0"
   },
   {
-    "owner": "dolthub",
-    "repo": "dolt",
-    "alias": "",
-    "type": 1,
-    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-    "replace": "",
-    "version": "v1.59.10"
-  },
-  {
     "owner": "go-gost",
     "repo": "gost",
     "alias": "",
