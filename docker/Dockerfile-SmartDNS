@@ -1,0 +1,100 @@
+FROM --platform=$BUILDPLATFORM rust:alpine AS plugin
+ARG TARGETOS TARGETARCH BRANCH
+
+# 设置目标架构
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        ARCH="x86_64"; \
+    else \
+        ARCH="$TARGETARCH"; \
+    fi
+# 将 ARCH 设置为环境变量
+ENV ARCH=${ARCH}
+
+WORKDIR /src
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache git build-base gcc make tzdata musl-dev upx ca-certificates bash openssl curl xz aria2 clang20 clang20-dev clang20-libclang
+
+ENV LIBCLANG_PATH=/usr/lib/
+ENV LD_LIBRARY_PATH=/usr/lib/
+
+RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns .
+
+# setup toolchain & target
+RUN set -ex \
+  && case "$TARGETARCH" in \
+    "amd64") FILE="x86_64-linux-musl-cross.tgz"; export RUST_TARGET="x86_64-unknown-linux-musl"; export CC="x86_64-linux-musl-gcc";; \
+    "arm64") FILE="aarch64-linux-musl-cross.tgz"; export RUST_TARGET="aarch64-unknown-linux-musl"; export CC="aarch64-linux-musl-gcc";; \
+    *) echo "Unsupported CPU architecture: $TARGETARCH"; exit 1 ;; \
+  esac \
+  && aria2c -x 16 -s 16 -o ${FILE} "https://musl.nn.ci/${FILE}" \
+  && tar xf ${FILE} --strip-components 1 -C /usr/local \
+  && rustup target add ${RUST_TARGET}
+
+WORKDIR /src/plugin/smartdns-ui
+RUN make \
+  && upx --lzma target/${RUST_TARGET}/release/libsmartdns_ui.so
+
+RUN mkdir -p /build \
+ && tree target -f \
+ && cp target/${RUST_TARGET}/release/libsmartdns_ui.so /build/smartdns_ui.so
+
+FROM --platform=$BUILDPLATFORM alpine AS builder
+ARG TARGETOS TARGETARCH BRANCH
+
+# 安装必要的工具和依赖
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache git upx build-base curl openssl-dev linux-headers
+
+# 克隆源码并进入目录
+RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /build/smartdns
+
+WORKDIR /build/smartdns
+
+# 设置目标架构
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+        ARCH="x86_64"; \
+    else \
+        ARCH="$TARGETARCH"; \
+    fi
+# 将 ARCH 设置为环境变量
+ENV ARCH=${ARCH}
+
+# 下载/安装交叉工具链
+RUN set -ex \
+  && if [ "$TARGETARCH" = "amd64" ]; then \
+       FILE="x86_64-linux-musl-cross.tgz"; export CC="x86_64-linux-musl-gcc"; export ARCH="x86_64"; \
+     else \
+       FILE="aarch64-linux-musl-cross.tgz"; export CC="aarch64-linux-musl-gcc"; export ARCH="aarch64"; \
+     fi \
+  && aria2c -x 16 -s 16 -o ${FILE} "https://musl.nn.ci/${FILE}" \
+  && tar xf ${FILE} --strip-components 1 -C /usr/local \
+  && ln -s /usr/local/bin/* /usr/bin/ || true
+
+# 设置编译和链接环境变量
+ENV LDFLAGS="-L/usr/lib"
+ENV CFLAGS="-I/usr/include"
+
+# 编译 smartdns
+RUN sh ./package/build-pkg.sh --platform $TARGETOS --arch $ARCH --static \
+  && ( cd package && tar -xvf *.tar.gz && chmod a+x smartdns/etc/init.d/smartdns ) \
+  && mkdir -p /release/var/log /release/run \
+  && cp package/smartdns/etc /release/ -a \
+  && cp package/smartdns/usr /release/ -a \
+  && upx --best /release/usr/sbin/smartdns
+COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
+
+# 清理构建目录
+RUN rm -rf /build
+
+FROM --platform=$BUILDPLATFORM alpine AS dist
+COPY --from=builder /release/ /
+EXPOSE 53/udp
+VOLUME ["/etc/smartdns/"]
+
+CMD ["/usr/sbin/smartdns", "-f", "-x"]
