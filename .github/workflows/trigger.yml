@@ -78,7 +78,7 @@ jobs:
               continue
             fi
 
-            if [ -n "$latest" ] && [ "$latest" != "$current" ]; then
+            if [ -n "$latest" ] && [ "$latest" != "$current" ] && [ "$(printf "%s\n%s" "$current" "$latest" | sort -V | tail -n1)" = "$latest" ]; then
               echo "owner=${owner}" >> $GITHUB_OUTPUT
               echo "repo=${name}" >> $GITHUB_OUTPUT
               echo "alias=${alias}" >> $GITHUB_OUTPUT
