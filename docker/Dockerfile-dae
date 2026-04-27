@@ -11,14 +11,14 @@ RUN set -ex \
   && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
   && apk update \
   && apk upgrade \
-  && apk add --no-cache git upx llvm15 clang15 make \
-  && ln -s /usr/bin/clang15 /usr/bin/clang \
-  && ln -s /usr/lib/llvm15/bin/clang++ /usr/bin/clang++ \
-  && export PATH=$PATH:/usr/lib/llvm15/bin \
+  && apk add --no-cache git upx llvm16 clang16 make \
+  && ln -s /usr/bin/clang16 /usr/bin/clang \
+  && ln -s /usr/lib/llvm16/bin/clang++ /usr/bin/clang++ \
+  && export PATH=$PATH:/usr/lib/llvm16/bin \
   && clang --version \
   && git clone -b $BRANCH --single-branch https://github.com/daeuniverse/dae /go/src/github.com/daeuniverse/dae \
   && git submodule update --init \
-  && export CLANG=clang-15 \
+  && export CLANG=clang-16 \
   && make OUTPUT=dae GOFLAGS="-buildvcs=false" CC=clang CGO_ENABLED=0 \
   && upx --lzma dae \
   && mkdir -p /release/usr/local/bin /release/etc/dae /release/usr/local/share/dae \
