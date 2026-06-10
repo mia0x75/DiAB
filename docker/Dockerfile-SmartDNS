@@ -66,6 +66,9 @@ RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /bui
 
 WORKDIR /build/smartdns
 
+RUN sed -i 's/context->uc_mcontext.pc/0/g' /build/smartdns/src/smartdns.c \
+ && sed -i 's/context->uc_mcontext.arm_pc/0/g' /build/smartdns/src/smartdns.c
+
 # 设置编译和链接环境变量
 ENV LDFLAGS="-L/usr/lib"
 ENV CFLAGS="-I/usr/include"
