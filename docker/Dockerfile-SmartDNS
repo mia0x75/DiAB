@@ -79,8 +79,10 @@ RUN set -ex \
      else \
        CC_NAME="aarch64-linux-musl-gcc"; STRIP_NAME="aarch64-linux-musl-strip"; ARCH_NAME="aarch64"; \
      fi \
-  && echo "Using CC=$CC_NAME STRIP=$STRIP_NAME ARCH=$ARCH_NAME" \
-  && CC=$CC_NAME STRIP=$STRIP_NAME sh ./package/build-pkg.sh --platform $TARGETOS --arch $ARCH_NAME --static \
+  && export CC=$CC_NAME \
+  && export STRIP=$STRIP_NAME \
+  && echo "Using CC=$CC STRIP=$STRIP ARCH=$ARCH_NAME" \
+  && sh ./package/build-pkg.sh --platform $TARGETOS --arch $ARCH_NAME --static \
   && ( cd package && tar -xvf *.tar.gz && chmod a+x smartdns/etc/init.d/smartdns ) \
   && mkdir -p /release/var/log /release/run \
   && cp package/smartdns/etc /release/ -a \
