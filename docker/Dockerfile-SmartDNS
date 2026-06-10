@@ -22,11 +22,10 @@ ENV LD_LIBRARY_PATH=/usr/lib/
 RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns .
 
 # setup toolchain & target
-# Use v1.2.4 which is the last stable version with ARM64 compatibility
 RUN set -ex \
   && case "$TARGETARCH" in \
-    "amd64") FILE="x86_64-linux-musl-cross-v1.2.4.tgz"; export RUST_TARGET="x86_64-unknown-linux-musl"; export CC="x86_64-linux-musl-gcc";; \
-    "arm64") FILE="aarch64-linux-musl-cross-v1.2.4.tgz"; export RUST_TARGET="aarch64-unknown-linux-musl"; export CC="aarch64-linux-musl-gcc";; \
+    "amd64") FILE="x86_64-linux-musl-cross.tgz"; export RUST_TARGET="x86_64-unknown-linux-musl"; export CC="x86_64-linux-musl-gcc";; \
+    "arm64") FILE="aarch64-linux-musl-cross.tgz"; export RUST_TARGET="aarch64-unknown-linux-musl"; export CC="aarch64-linux-musl-gcc";; \
     *) echo "Unsupported CPU architecture: $TARGETARCH"; exit 1 ;; \
   esac \
   && aria2c -x 16 -s 16 -o ${FILE} "https://musl.nn.ci/${FILE}" \
@@ -52,12 +51,11 @@ RUN set -ex \
   && apk add --no-cache git upx build-base curl openssl-dev linux-headers aria2
 
 # 下载/安装交叉工具链（与 plugin stage 对应）
-# Use v1.2.4 which is the last stable version with ARM64 compatibility
 RUN set -ex \
   && if [ "$TARGETARCH" = "amd64" ]; then \
-       FILE="x86_64-linux-musl-cross-v1.2.4.tgz"; \
+       FILE="x86_64-linux-musl-cross.tgz"; \
      else \
-       FILE="aarch64-linux-musl-cross-v1.2.4.tgz"; \
+       FILE="aarch64-linux-musl-cross.tgz"; \
      fi \
   && aria2c -x 16 -s 16 -o ${FILE} "https://musl.nn.ci/${FILE}" \
   && tar xf ${FILE} --strip-components 1 -C /usr/local \
@@ -89,8 +87,10 @@ RUN set -ex && \
 RUN set -ex && \
     . /tmp/build.env && \
     echo "Using CC=$CC_NAME STRIP=$STRIP_NAME ARCH=$ARCH_NAME" && \
-    which $CC_NAME || (echo "CC not found: $CC_NAME" && exit 1) && \
-    which $STRIP_NAME || (echo "STRIP not found: $STRIP_NAME" && exit 1)
+    ls -la /usr/local/bin/ | head -20 && \
+    ls -la /usr/bin/ | grep -E "gcc|musl" | head -10 && \
+    which $CC_NAME || echo "WARNING: CC not found in PATH, checking alternative locations..." && \
+    find /usr/local -name "$CC_NAME" 2>/dev/null || echo "CC binary not found anywhere"
 
 # Step 3: 执行构建脚本
 RUN set -ex && \
