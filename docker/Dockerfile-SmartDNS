@@ -54,7 +54,7 @@ RUN set -ex && \
     else \
       ARCH_NAME="aarch64"; \
     fi && \
-    sh ./package/build-pkg.sh --platform linux --arch $ARCH_NAME
+    sh ./package/build-pkg.sh --platform linux --arch $ARCH_NAME --with-ui
 
 # Step 2: 解压构建产物
 RUN set -ex && \
