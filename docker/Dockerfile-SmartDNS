@@ -1,0 +1,100 @@
+FROM rust:alpine AS plugin
+ARG BRANCH
+
+WORKDIR /src
+
+# 安装必要的原生构建依赖，移除了无用的 gcc 交叉编译依赖
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache git build-base make tzdata upx ca-certificates bash clang20 clang20-dev clang20-libclang
+
+ENV LIBCLANG_PATH=/usr/lib/
+ENV LD_LIBRARY_PATH=/usr/lib/
+
+RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns .
+
+WORKDIR /src/plugin/smartdns-ui
+
+# 1. 直接执行原生 make（此时系统原生的 Rust 和 GCC 完美匹配当前架构）
+RUN make
+
+# 2. 动态定位并压缩二进制文件，兼容 Cargo 不同的输出目录结构
+RUN set -ex \
+  && SO_FILE=$(find target -name "libsmartdns_ui.so" -path "*/release/*" | head -n 1) \
+  && echo "Found plugin at: $SO_FILE" \
+  && upx --lzma "$SO_FILE" \
+  && mkdir -p /build \
+  && cp "$SO_FILE" /build/smartdns_ui.so
+
+#//////////////////////////////////
+FROM alpine AS builder
+ARG TARGETARCH BRANCH
+
+# 安装必要的工具和依赖
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache git upx build-base curl openssl-dev openssl-libs-static linux-headers aria2 pkgconf
+
+# 克隆源码
+RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /build/smartdns
+
+WORKDIR /build/smartdns
+
+#RUN sed -i 's/context->uc_mcontext.pc/0/g' /build/smartdns/src/smartdns.c \
+# && sed -i 's/context->uc_mcontext.arm_pc/0/g' /build/smartdns/src/smartdns.c
+
+# Step 1: 执行构建脚本
+RUN set -ex && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+      ARCH_NAME="x86_64"; \
+    else \
+      ARCH_NAME="aarch64"; \
+    fi && \
+    sh ./package/build-pkg.sh --platform linux --arch $ARCH_NAME
+
+# Step 2: 解压构建产物
+RUN set -ex && \
+    cd package && \
+    tar -xvf *.tar.gz && \
+    chmod a+x smartdns/etc/init.d/smartdns
+
+# Step 3: 准备发布目录
+RUN set -ex && \
+    mkdir -p /release/var/log /release/run
+
+# Step 4: 复制配置文件
+RUN set -ex && \
+    cp package/smartdns/etc /release/ -a
+
+# Step 5: 复制二进制文件
+RUN set -ex && \
+    cp package/smartdns/usr /release/ -a
+
+# Step 6: 压缩二进制文件
+RUN set -ex && \
+    upx --best /release/usr/sbin/smartdns
+
+# Step 7: 复制插件
+COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
+
+# Step 8: 清理构建目录
+RUN rm -rf /build
+
+FROM alpine AS dist
+
+COPY --from=builder /release/ /
+
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache openssl libgcc ca-certificates tzdata \
+  && chmod +x /usr/sbin/smartdns
+
+EXPOSE 53/udp 53/tcp
+
+CMD ["/usr/sbin/smartdns", "-f", "-x", "-c", "/etc/smartdns/smartdns.conf"]
