@@ -71,27 +71,58 @@ ENV LDFLAGS="-L/usr/lib"
 ENV CFLAGS="-I/usr/include"
 ENV PATH="/usr/local/bin:/usr/bin:${PATH}"
 
-# 在同一个 RUN 中根据 TARGETARCH 选择交叉编译器，并直接以环境前缀运行 build-pkg.sh
-# 这样不会丢失 export，因为变量只在本 RUN 中需要生效
-RUN set -ex \
-  && if [ "$TARGETARCH" = "amd64" ]; then \
-       CC_NAME="x86_64-linux-musl-gcc"; STRIP_NAME="x86_64-linux-musl-strip"; ARCH_NAME="x86_64"; \
-     else \
-       CC_NAME="aarch64-linux-musl-gcc"; STRIP_NAME="aarch64-linux-musl-strip"; ARCH_NAME="aarch64"; \
-     fi \
-  && export CC=$CC_NAME \
-  && export STRIP=$STRIP_NAME \
-  && echo "Using CC=$CC STRIP=$STRIP ARCH=$ARCH_NAME" \
-  && sh ./package/build-pkg.sh --platform $TARGETOS --arch $ARCH_NAME --static \
-  && ( cd package && tar -xvf *.tar.gz && chmod a+x smartdns/etc/init.d/smartdns ) \
-  && mkdir -p /release/var/log /release/run \
-  && cp package/smartdns/etc /release/ -a \
-  && cp package/smartdns/usr /release/ -a \
-  && upx --best /release/usr/sbin/smartdns
+# Step 1: 设置编译器环境变量
+RUN set -ex && \
+    if [ "$TARGETARCH" = "amd64" ]; then \
+      echo 'CC_NAME="x86_64-linux-musl-gcc"' >> /tmp/build.env && \
+      echo 'STRIP_NAME="x86_64-linux-musl-strip"' >> /tmp/build.env && \
+      echo 'ARCH_NAME="x86_64"' >> /tmp/build.env; \
+    else \
+      echo 'CC_NAME="aarch64-linux-musl-gcc"' >> /tmp/build.env && \
+      echo 'STRIP_NAME="aarch64-linux-musl-strip"' >> /tmp/build.env && \
+      echo 'ARCH_NAME="aarch64"' >> /tmp/build.env; \
+    fi
 
+# Step 2: 验证编译器存在
+RUN set -ex && \
+    . /tmp/build.env && \
+    echo "Using CC=$CC_NAME STRIP=$STRIP_NAME ARCH=$ARCH_NAME" && \
+    which $CC_NAME || (echo "CC not found: $CC_NAME" && exit 1) && \
+    which $STRIP_NAME || (echo "STRIP not found: $STRIP_NAME" && exit 1)
+
+# Step 3: 执行构建脚本
+RUN set -ex && \
+    . /tmp/build.env && \
+    export CC=$CC_NAME && \
+    export STRIP=$STRIP_NAME && \
+    sh ./package/build-pkg.sh --platform $TARGETOS --arch $ARCH_NAME --static
+
+# Step 4: 解压构建产物
+RUN set -ex && \
+    cd package && \
+    tar -xvf *.tar.gz && \
+    chmod a+x smartdns/etc/init.d/smartdns
+
+# Step 5: 准备发布目录
+RUN set -ex && \
+    mkdir -p /release/var/log /release/run
+
+# Step 6: 复制配置文件
+RUN set -ex && \
+    cp package/smartdns/etc /release/ -a
+
+# Step 7: 复制二进制文件
+RUN set -ex && \
+    cp package/smartdns/usr /release/ -a
+
+# Step 8: 压缩二进制文件
+RUN set -ex && \
+    upx --best /release/usr/sbin/smartdns
+
+# Step 9: 复制插件
 COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
 
-# 清理构建目录
+# Step 10: 清理构建目录
 RUN rm -rf /build
 
 FROM --platform=$BUILDPLATFORM alpine AS dist
