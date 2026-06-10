@@ -29,7 +29,7 @@ RUN set -ex \
   && cp "$SO_FILE" /build/smartdns_ui.so
 
 #//////////////////////////////////
-FROM alpine AS builder
+FROM rust:alpine AS builder
 ARG TARGETARCH BRANCH
 
 # 安装必要的工具和依赖
