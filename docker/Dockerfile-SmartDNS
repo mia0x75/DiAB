@@ -84,7 +84,7 @@ RUN set -ex && \
     upx --best /release/usr/sbin/smartdns
 
 # Step 7: 复制插件
-COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
+# COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
 
 # Step 8: 清理构建目录
 RUN rm -rf /build
