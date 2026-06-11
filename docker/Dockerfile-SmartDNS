@@ -37,7 +37,8 @@ RUN set -ex \
   && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
   && apk update \
   && apk upgrade \
-  && apk add --no-cache git upx build-base curl openssl-dev openssl-libs-static linux-headers aria2 pkgconf
+  && apk add --no-cache git upx build-base curl openssl-dev openssl-libs-static linux-headers aria2 pkgconf \
+                        make tzdata ca-certificates bash clang20 clang20-dev clang20-libclang tree
 
 # 克隆源码
 RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /build/smartdns
@@ -60,6 +61,7 @@ RUN set -ex && \
 RUN set -ex && \
     cd package && \
     tar -xvf *.tar.gz && \
+    tree . && \
     chmod a+x smartdns/etc/init.d/smartdns
 
 # Step 3: 准备发布目录
