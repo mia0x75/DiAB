@@ -43,6 +43,8 @@ RUN set -ex \
 ENV LIBCLANG_PATH=/usr/lib/
 ENV LD_LIBRARY_PATH=/usr/lib/
 
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+
 # 克隆源码
 RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /build/smartdns
 
