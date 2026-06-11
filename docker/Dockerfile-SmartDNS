@@ -38,10 +38,12 @@ RUN set -ex \
   && apk update \
   && apk upgrade \
   && apk add --no-cache git upx build-base curl openssl-dev openssl-libs-static linux-headers aria2 pkgconf \
-                        make tzdata ca-certificates bash clang20 clang20-dev clang20-libclang tree
+                        make tzdata ca-certificates bash clang20 clang20-dev clang20-libclang tree \
+                        clang20-static llvm20-dev llvm20-static
 
 ENV LIBCLANG_PATH=/usr/lib/
 ENV LD_LIBRARY_PATH=/usr/lib/
+ENV BINDGEN_EXTRA_CLANG_ARGS="-I/usr/include/clang/20/include"
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 
