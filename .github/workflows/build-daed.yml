@@ -169,6 +169,8 @@ jobs:
           pnpm install
           pnpm build
           cd ../..
+
+          pnpm install
           
           cd apps/web
           pnpm install
