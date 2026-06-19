@@ -1,4 +1,4 @@
-name: "Auto Build dae"
+name: "Auto Build daed"
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     types: [Auto Build daed]
     
 env:
-  DOCKER_REPO: 'dae'
+  DOCKER_REPO: 'daed'
   GITHUB_REPO: 'daeuniverse/daed'
   DOCKER_FILE: 'Dockerfile-daed'
   APP_NAME: 'daed'
@@ -130,76 +130,100 @@ jobs:
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
 
+build-releases:
+  needs: check-version
+  runs-on: ubuntu-latest
+  name: build releases
+  env:
+    BINARY: daed
+    VERSION: ${{ needs.check-version.outputs.version }}
+    # 如果上一步没有传递这些变量，建议在这里写死默认值或从全局 env 获取
 
-  build-releases:
-    needs: check-version
-    runs-on: ubuntu-latest
-    name: build releases
-    env:
-      CGO_ENABLED: 0
-      BINARY: dae
-      VERSION: ${{ needs.check-version.outputs.version }}
-      GO_VERSION: ${{ needs.check-version.outputs.go_version }}
-      BUILD_DATE: ${{ needs.check-version.outputs.build_date }}
+  strategy:
+    matrix:
+      goos: [linux]
+      goarch: [amd64, arm64]
 
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [amd64, arm64]
+  steps:
+    # 1. 检出代码（合并了你原有的两步，直接使用 recursive 递归拉取子模块）
+    - name: clone repository
+      uses: actions/checkout@v4
+      with:
+        repository: "${{ env.GITHUB_REPO }}"
+        ref: "${{ env.VERSION }}"
+        fetch-depth: 1
+        submodules: recursive # 关键：这一步自动处理了 git submodule update --init
 
-    steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    # 2. 准备前端编译环境
+    - name: setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18 # daed 前端推荐的 Node 版本
 
-      - name: clone repository
-        uses: actions/checkout@v4
-        with:
-          repository: "${{ env.GITHUB_REPO }}"
-          ref: "${{ env.VERSION }}"
-          fetch-depth: 1
+    - name: install pnpm & build web ui
+      run: |
+        npm install -g pnpm
+        cd apps/web
+        pnpm install
+        pnpm build
 
-      - name: install dependencies
-        run: |
-          sudo apt-get install -y llvm-15 clang-15 git make
-          go mod download
-          git submodule update --init
+    # 3. 准备后端与核心编译环境
+    - name: setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
 
-      - name: build releases
-        id: build
-        env:
-          CLANG: clang-15
-        run: |
-          make OUTPUT=release/dae GOFLAGS="-buildvcs=false" CC=clang CGO_ENABLED=0
-          upx --lzma release/${{ env.BINARY }}
-          echo "status=success" >> $GITHUB_OUTPUT
+    - name: install clang & dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y llvm-15 clang-15 make upx-ucl
 
-      - name: upload binaries to artifact
-        if: steps.build.outputs.status == 'success' && !cancelled()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
-          path: release/
+    # 4. 终极合体编译
+    - name: build releases
+      id: build
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        mkdir -p release
+        # 进入后端目录，利用 Makefile 打包前端文件生成最终二进制
+        cd wing
+        make APPNAME=${{ env.BINARY }} OUTPUT=../release/${{ env.BINARY }} WEB_DIST=../apps/web/dist CC=clang-15 GOFLAGS="-buildvcs=false" bundle
+        
+        # 压缩二进制文件
+        cd ../release
+        upx --lzma ${{ env.BINARY }}
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    # 5. 上传 Artifact (供 Action 页面下载)
+    - name: upload binaries to artifact
+      if: steps.build.outputs.status == 'success' && !cancelled()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
+        path: release/${{ env.BINARY }}
           
-      - name: prepare release
-        if: steps.build.outputs.status == 'success' && !cancelled()
-        run: |
-          cd release
-          tar czf ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ env.BINARY }}
-          rm ${{ env.BINARY }}
+    # 6. 打包 tar.gz 准备 Release
+    - name: prepare release archive
+      if: steps.build.outputs.status == 'success' && !cancelled()
+      run: |
+        cd release
+        tar czf ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ env.BINARY }}
+        rm ${{ env.BINARY }}
 
-      - name: upload binaries to release
-        id: release
-        if: steps.build.outputs.status == 'success' && !cancelled()
-        uses: softprops/action-gh-release@v1
-        with:
-          files: release/*
-          tag_name: ${{ env.APP_NAME }}-${{ env.VERSION }}
-          body: ${{ env.COMMIT }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
+    # 7. 发布到 GitHub Releases
+    - name: upload binaries to release
+      id: release
+      if: steps.build.outputs.status == 'success' && !cancelled()
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*.tar.gz
+        tag_name: ${{ env.VERSION }} # 注意：确保这里的 Tag 格式与你触发 Action 的条件匹配
+        body: "Automated build for daed release ${{ env.VERSION }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   update-repo:
     needs:
       - check-version

@@ -36,7 +36,7 @@ jobs:
 
   check-version:
     needs: process-dispatch
-    if: ${{ needs.process-dispatch.outputs.status }} == 'success'
+    if: ${{ needs.process-dispatch.outputs.status == 'success' }}
     runs-on: ubuntu-latest
     name: "check version"
     outputs:
