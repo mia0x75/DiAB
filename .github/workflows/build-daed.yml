@@ -163,6 +163,13 @@ jobs:
       - name: install pnpm & build web ui
         run: |
           npm install -g pnpm
+          pnpm install
+          # Build dae-lsp package first to create dist/server.cjs
+          cd packages/dae-lsp
+          pnpm install
+          pnpm build
+          cd ../..
+          
           cd apps/web
           pnpm install
           pnpm build
