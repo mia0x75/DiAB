@@ -1,6 +1,7 @@
 name: "Auto Build dae"
 
 on:
+  workflow_dispatch:
   repository_dispatch:
     types: [Auto Build dae]
     
