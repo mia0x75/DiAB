@@ -17,7 +17,7 @@ RUN git clone -b $BRANCH --single-branch --recursive https://github.com/daeunive
 WORKDIR /src/apps/web
 RUN cd ../../packages/dae-lsp \
   && pnpm install && pnpm build \
-  && cd ../../apps/web \
+  && cd ../.. && pnpm install && apps/web \
   && pnpm install && pnpm build
 
 # ==========================================
