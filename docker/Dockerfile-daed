@@ -15,8 +15,10 @@ RUN git clone -b $BRANCH --single-branch --recursive https://github.com/daeunive
 
 # 进入前端工作区，安装依赖并打包静态文件
 WORKDIR /src/apps/web
-RUN pnpm install \
-  && pnpm build
+RUN cd ../../packages/dae-lsp \
+  && pnpm install && pnpm build \
+  && cd ../../apps/web \
+  && pnpm install && pnpm build
 
 # ==========================================
 # 阶段 2：编译核心与后端并内嵌前端 (Golang + Clang 环境)
