@@ -170,7 +170,7 @@ jobs:
           pnpm build
           cd ../..
 
-          pnpm install
+          pnpm install --recursive
           
           cd apps/web
           pnpm install
