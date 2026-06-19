@@ -3,13 +3,13 @@ name: "Auto Build dae"
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [Auto Build dae]
+    types: [Auto Build daed]
     
 env:
   DOCKER_REPO: 'dae'
-  GITHUB_REPO: 'daeuniverse/dae'
-  DOCKER_FILE: 'Dockerfile-dae'
-  APP_NAME: 'dae'
+  GITHUB_REPO: 'daeuniverse/daed'
+  DOCKER_FILE: 'Dockerfile-daed'
+  APP_NAME: 'daed'
 
 permissions:
   contents: write
@@ -37,7 +37,7 @@ jobs:
           
   check-version:
     needs: process-dispatch
-    if: ${{ needs.process-dispatch.outputs.status }} == 'success'
+    if: ${{ needs.process-dispatch.outputs.status == 'success' }}
     runs-on: ubuntu-latest
     name: "check version"
     outputs:
