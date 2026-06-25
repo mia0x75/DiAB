@@ -25,7 +25,7 @@ RUN cd /src/packages/dae-lang-core && pnpm install && pnpm build \
 FROM golang:alpine AS bundle-builder
 
 # 安装 eBPF 交叉编译所需的工具链
-RUN apk update && apk add --no-cache git make llvm clang upx linux-headers
+RUN apk update && apk add --no-cache git make llvm clang upx linux-headers bash
 
 WORKDIR /src
 
