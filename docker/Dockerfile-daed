@@ -14,11 +14,10 @@ WORKDIR /src
 RUN git clone -b $BRANCH --single-branch --recursive https://github.com/daeuniverse/daed .
 
 # 进入前端工作区，安装依赖并打包静态文件
-RUN ls \
-  && cd packages/dae-lang-core && pnpm install && pnpm build && cd ../../ \
-  && cd packages/dae-lsp && pnpm install && pnpm build && cd ../ \
-  && cd packages && pnpm install --recursive && cd ../ \
-  && cd apps/web && pnpm install && pnpm build
+RUN cd /src/packages/dae-lang-core && pnpm install && pnpm build \
+  && cd /src/packages/dae-lsp && pnpm install && pnpm build \
+  && cd /src/packages && pnpm install --recursive \
+  && cd /src/apps/web && pnpm install && pnpm build
 
 # ==========================================
 # 阶段 2：编译核心与后端并内嵌前端 (Golang + Clang 环境)
