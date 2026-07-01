@@ -22,14 +22,24 @@ jobs:
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
     steps:
-      - name: check-repo-dispatch
+      - id: check-repo-dispatch
         run: |
-          if [ "${{ env.GITHUB_REPO }}" = "${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}" ]; then
+          EXPECTED_REPO="${{ env.GITHUB_REPO }}"
+          ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
+          
+          echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
+          echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
+          echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
+          echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
+          echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
+          
+          if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
+            echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
           else
+            echo "[ERROR] 仓库名称确认失败"
             echo "status=failure" >> $GITHUB_OUTPUT
-          fi
-          
+          fi         
           
   check-version:
     needs: process-dispatch
