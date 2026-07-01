@@ -22,14 +22,30 @@ jobs:
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
     steps:
-      - name: check-repo-dispatch
+      - id: check-repo-dispatch
+        #run: |
+        #  if [ "${{ env.GITHUB_REPO }}" = "${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}" ]; then
+        #    echo "status=success" >> $GITHUB_OUTPUT
+        #  else
+        #    echo "status=failure" >> $GITHUB_OUTPUT
+        #  fi
         run: |
-          if [ "${{ env.GITHUB_REPO }}" = "${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}" ]; then
+          EXPECTED_REPO="${{ env.GITHUB_REPO }}"
+          ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
+          
+          echo "[INFO] Expected repo: $EXPECTED_REPO"
+          echo "[INFO] Actual repo: $ACTUAL_REPO"
+          echo "[INFO] Event payload owner: ${{ github.event.client_payload.owner }}"
+          echo "[INFO] Event payload repo: ${{ github.event.client_payload.repo }}"
+          echo "[INFO] Full client_payload: ${{ toJSON(github.event.client_payload) }}"
+          
+          if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
+            echo "[INFO] Repository validation passed"
             echo "status=success" >> $GITHUB_OUTPUT
           else
+            echo "[ERROR] Repository validation failed"
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
-
           
   check-version:
     needs: process-dispatch
