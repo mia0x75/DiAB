@@ -42,7 +42,7 @@ RUN set -ex \
                         clang20-static llvm20-dev llvm20-static
 
 ENV LIBCLANG_PATH=/usr/lib/
-ENV LD_LIBRARY_PATH=/usr/lib/
+ENV LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
 ENV BINDGEN_EXTRA_CLANG_ARGS="-I/usr/include/clang/20/include"
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
