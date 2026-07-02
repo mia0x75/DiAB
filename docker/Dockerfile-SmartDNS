@@ -1,35 +1,4 @@
-FROM rust:alpine AS plugin
-ARG BRANCH
-
-WORKDIR /src
-
-# 安装必要的原生构建依赖，移除了无用的 gcc 交叉编译依赖
-#RUN set -ex \
-#  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
-#  && apk update \
-#  && apk upgrade \
-#  && apk add --no-cache git build-base make tzdata upx ca-certificates bash clang20 clang20-dev clang20-libclang
-
-#ENV LIBCLANG_PATH=/usr/lib/
-#ENV LD_LIBRARY_PATH=/usr/lib/
-
-#RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns .
-
-#WORKDIR /src/plugin/smartdns-ui
-
-# 1. 直接执行原生 make（此时系统原生的 Rust 和 GCC 完美匹配当前架构）
-#RUN make
-
-# 2. 动态定位并压缩二进制文件，兼容 Cargo 不同的输出目录结构
-#RUN set -ex \
-#  && SO_FILE=$(find target -name "libsmartdns_ui.so" -path "*/release/*" | head -n 1) \
-#  && echo "Found plugin at: $SO_FILE" \
-#  && upx --lzma "$SO_FILE" \
-#  && mkdir -p /build \
-#  && cp "$SO_FILE" /build/smartdns_ui.so
-
-#//////////////////////////////////
-FROM rust:alpine AS builder
+FROM alpine AS builder
 ARG TARGETARCH BRANCH
 
 # 安装必要的工具和依赖
@@ -39,21 +8,17 @@ RUN set -ex \
   && apk upgrade \
   && apk add --no-cache git upx build-base curl openssl-dev openssl-libs-static linux-headers aria2 pkgconf \
                         make tzdata ca-certificates bash clang20 clang20-dev clang20-libclang tree \
-                        clang20-static llvm20-dev llvm20-static
+                        clang20-static llvm20-dev llvm20-static \
+                        rust cargo
 
 ENV LIBCLANG_PATH=/usr/lib/
-ENV LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/usr/lib
 ENV BINDGEN_EXTRA_CLANG_ARGS="-I/usr/include/clang/20/include"
-
-ENV RUSTFLAGS="-C target-feature=-crt-static"
 
 # 克隆源码
 RUN git clone -b $BRANCH --single-branch https://github.com/pymumu/smartdns /build/smartdns
 
 WORKDIR /build/smartdns
-
-#RUN sed -i 's/context->uc_mcontext.pc/0/g' /build/smartdns/src/smartdns.c \
-# && sed -i 's/context->uc_mcontext.arm_pc/0/g' /build/smartdns/src/smartdns.c
 
 # Step 1: 执行构建脚本
 RUN set -ex && \
