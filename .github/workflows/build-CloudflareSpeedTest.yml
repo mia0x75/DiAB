@@ -125,9 +125,9 @@ jobs:
           password: ${{ env.DOCKER_PASSWORD }}
 
       - name: push images to dockerhub
+        uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
-        uses: docker/build-push-action@v7
         with:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
