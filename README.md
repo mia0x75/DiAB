@@ -16,7 +16,7 @@
 | 14 | gost | v3.2.6 |
 | 15 | gotify | v2.9.1 |
 | 16 | SFTPGo | v2.7.4 |
-| 17 | dae | v1.1.0 |
+| 17 | daed | v1.1.0 |
 | 18 | Ghostunnel | v1.11.0 |
 | 19 | Proxify | v0.0.16 |
 | 20 | hiddify | v3.2.0 |
