@@ -18,7 +18,7 @@ permissions:
 jobs:
   process-dispatch:
     runs-on: ubuntu-latest
-    name: "process dispatch"
+    name: "process-dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
     steps:
@@ -51,7 +51,7 @@ jobs:
       commit: ${{ steps.get-version.outputs.commit }}
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -76,7 +76,7 @@ jobs:
       MSG: ${{ needs.check-version.outputs.commit }}
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -105,7 +105,7 @@ jobs:
 
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -162,7 +162,7 @@ jobs:
 
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -190,7 +190,7 @@ jobs:
           cargo install cbindgen
 
       - name: clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: "shadowsocksr-live/overtls"
           ref: "${{ env.VERSION }}"
@@ -244,7 +244,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.PAT }}
           fetch-depth: 0
