@@ -19,7 +19,7 @@ permissions:
 jobs:
   process-dispatch:
     runs-on: ubuntu-latest
-    name: "process dispatch"
+    name: "process-dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
       version: ${{ steps.check-repo-dispatch.outputs.version }}
@@ -56,7 +56,7 @@ jobs:
       build_date: ${{ steps.get-version.outputs.build_date }}
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -84,7 +84,7 @@ jobs:
       MSG: ${{ needs.check-version.outputs.commit }}
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -110,7 +110,7 @@ jobs:
 
     steps:
       - name: checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -156,7 +156,7 @@ jobs:
     steps:
       # 1. 检出代码（合并了你原有的两步，直接使用 recursive 递归拉取子模块）
       - name: clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: "${{ env.GITHUB_REPO }}"
           ref: "${{ env.VERSION }}"
@@ -261,7 +261,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.PAT }}
           fetch-depth: 0
