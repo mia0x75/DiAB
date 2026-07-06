@@ -177,8 +177,12 @@ jobs:
           sudo apt-get install -y build-essential git upx unzip
 
       - name: clone repository
-        run: |
-          git clone https://github.com/hiddify/hiddify-core hiddify/hiddify-core
+        uses: actions/checkout@v7
+        with:
+          repository: "${{ env.GITHUB_REPO }}"
+          ref: "${{ env.VERSION }}"
+          fetch-depth: 1
+          submodules: recursive # 关键：这一步自动处理了 git submodule update --init
           
       - name: download dependencies
         run: |
