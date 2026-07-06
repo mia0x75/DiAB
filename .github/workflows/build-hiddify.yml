@@ -5,6 +5,7 @@ env:
   GITHUB_REPO: 'hiddify/hiddify-core'
   DOCKER_FILE: 'Dockerfile-hiddify'
   APP_NAME: 'hiddify'
+  WORK_DIR: 'hiddify/hiddify-core'
   
 on:
   repository_dispatch:
@@ -65,7 +66,6 @@ jobs:
           LATEST_VERSION=${{ needs.process-dispatch.outputs.version }}
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
           
-
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
@@ -74,7 +74,6 @@ jobs:
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-
 
   create-release:
     needs: check-version
@@ -101,7 +100,6 @@ jobs:
           prerelease: false
           overwrite: true
 
-  
   build-docker-image:
     needs: check-version
     runs-on: ubuntu-latest
@@ -109,7 +107,7 @@ jobs:
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-      VERSION: ${{ needs.Check-version.outputs.version }}
+      VERSION: ${{ needs.check-version.outputs.version }}
 
     steps:
       - name: checkout code
@@ -142,7 +140,6 @@ jobs:
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
 
-  
   build-releases:
     needs: check-version
     runs-on: ubuntu-latest
@@ -154,6 +151,11 @@ jobs:
       GO_VERSION: ${{ needs.check-version.outputs.go_version }}
       BUILD_DATE: ${{ needs.check-version.outputs.build_date }}
       MSG: ${{ needs.check-version.outputs.commit }}
+      BUILD_TAGS: with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc,with_awg,tfogo_checklinkname0,with_naive_outbound,with_conntrack,with_dhcp,with_low_memory,with_purego
+      LDFLAGS: >-
+        -buildid=
+        -w -s -checklinkname=0
+        -buildid=${{ needs.check-version.outputs.version }}
 
     strategy:
       matrix:
@@ -171,85 +173,86 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: initialize environment
+      - name: install system dependencies
         run: |
           sudo apt-get -qq update --fix-missing
           sudo apt-get install -y build-essential git upx unzip
 
-      - name: clone repository
+      - name: clone source repository
         uses: actions/checkout@v7
         with:
-          repository: "${{ env.GITHUB_REPO }}"
-          ref: "${{ env.VERSION }}"
+          repository: ${{ env.GITHUB_REPO }}
+          ref: ${{ env.VERSION }}
           fetch-depth: 1
-          path: hiddify/hiddify-core
-          submodules: recursive # 关键：这一步自动处理了 git submodule update --init
-          
-      - name: download dependencies
+          path: ${{ env.WORK_DIR }}
+          submodules: recursive
+
+      - name: download go dependencies
         run: |
-          cd hiddify/hiddify-core
+          cd ${{ env.WORK_DIR }}
           go mod tidy
           go mod download
 
-      - name: prepare frontend
+      - name: prepare frontend assets
         run: |
-          cd hiddify/hiddify-core
-          curl -L -o webui.zip  https://github.com/hiddify/Yacd-meta/archive/gh-pages.zip
+          cd ${{ env.WORK_DIR }}
+          
+          echo "Downloading Yacd-meta UI assets..."
+          curl -fsSL -o webui.zip https://github.com/hiddify/Yacd-meta/archive/gh-pages.zip
           unzip -d ./ -q webui.zip
           rm webui.zip
+          
+          mkdir -p release
           rm -rf bin/webui
-          mkdir release -p
           mv Yacd-meta-gh-pages release/webui
 
-      - name: set environment variables
-        id: variables
-        run: |
-          commit=$(git log --pretty=format:"%h" -1)
-          ldflags="\
-            -buildid= \
-            -w -s -checklinkname=0 -buildid=${{ env.VERSION }}"
-          echo "ldflags=$ldflags" >> $GITHUB_ENV
-          echo "tags=with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc,with_awg,tfogo_checklinkname0,with_naive_outbound,with_conntrack,with_dhcp,with_low_memory,with_purego" >> $GITHUB_ENV
-          echo "version=$releaseVersion" >> $GITHUB_OUTPUT
-            
-      - name: build application
+      - name: build binary
         id: build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          cd hiddify/hiddify-core
+          cd ${{ env.WORK_DIR }}
           
-          go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ steps.variables.outputs.ldflags }}" -tags=${{ steps.variables.outputs.tags }} -o release/hiddify ./cmd/main
-          upx --lzma release/hiddify
+          echo "Building ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }} v${{ env.VERSION }}..."
+          go build \
+            -v \
+            -trimpath \
+            -ldflags "--extldflags '-static -fpic' ${{ env.LDFLAGS }}" \
+            -tags=${{ env.BUILD_TAGS }} \
+            -o release/${{ env.BINARY }} \
+            ./cmd/main
+          
+          echo "Compressing binary with UPX..."
+          upx --lzma release/${{ env.BINARY }}
+          
+          echo "Build completed successfully"
           echo "status=success" >> $GITHUB_OUTPUT
 
-      - name: upload binaries to artifact
-        if: steps.build.outputs.status == 'success' && !cancelled()
+      - name: upload to artifacts
+        if: steps.build.outputs.status == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: hiddify-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
-          path: hiddify/hiddify-core/release/
-          
-      - name: prepare release
-        if: steps.build.outputs.status == 'success' && !cancelled()
-        run: |
-          cd hiddify/hiddify-core/release
-          tar czf hiddify-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz hiddify
-          rm hiddify
+          name: ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
+          path: ${{ env.WORK_DIR }}/release/
+          retention-days: 7
 
-      - name: upload binaries to release
-        id: release
-        if: steps.build.outputs.status == 'success' && !cancelled()
+      - name: package release archive
+        if: steps.build.outputs.status == 'success'
+        run: |
+          cd ${{ env.WORK_DIR }}/release
+          tar czf ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ env.BINARY }}
+          ls -lh ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+
+      - name: upload to release
+        if: steps.build.outputs.status == 'success'
         uses: svenstaro/upload-release-action@v2
         with:
-          file: hiddify/hiddify-core/release/*
-          file_glob: true
+          file: ${{ env.WORK_DIR }}/release/${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
           tag: ${{ env.APP_NAME }}-${{ env.VERSION }}
           overwrite: true
           body: ${{ env.MSG }}
-        
-  
+
   update-repo:
     needs:
       - check-version
