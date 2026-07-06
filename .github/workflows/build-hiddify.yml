@@ -182,6 +182,7 @@ jobs:
           repository: "${{ env.GITHUB_REPO }}"
           ref: "${{ env.VERSION }}"
           fetch-depth: 1
+          path: hiddify/hiddify-core
           submodules: recursive # 关键：这一步自动处理了 git submodule update --init
           
       - name: download dependencies
