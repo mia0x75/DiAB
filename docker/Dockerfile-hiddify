@@ -17,9 +17,9 @@ RUN set -ex \
   && mkdir -p /release/app /release/etc/hiddify \
   && mv Yacd-meta-gh-pages /release/app/webui \
   && ldflags="\
-     -buildid= \
-     -w -s " \
-  && tags="with_gvisor,with_quic,with_wireguard,with_ech,with_utls,with_clash_api,with_grpc,with_dhcp,with_low_memory,with_conntrack" \
+     -buildid=${BRANCH} \
+     -w -s -checklinkname=0" \
+  && tags="with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc,with_awg,tfogo_checklinkname0,with_naive_outbound,with_conntrack,with_dhcp,with_low_memory,with_purego" \
   && go build -v -trimpath -ldflags "--extldflags '-static -fpic' $ldflags" -tags=$tags -o /release/app/hiddify ./cmd/main \
   && upx --lzma /release/app/hiddify \
   && cat > /release/app/hiddify.json << EOF
