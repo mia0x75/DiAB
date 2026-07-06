@@ -10,6 +10,7 @@ RUN set -ex \
   && apk update \
   && apk upgrade \
   && apk add --no-cache git upx unzip curl \
+  && RUN git config --global url."https://github.com/".insteadOf "git@github.com:" \
   && git clone -b ${BRANCH} --single-branch --recursive https://github.com/hiddify/hiddify-core /go/src/github.com/hiddify/hiddify-core \
   && curl -L -o webui.zip  https://github.com/hiddify/Yacd-meta/archive/gh-pages.zip \
   && unzip -d ./ -q webui.zip \
