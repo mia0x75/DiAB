@@ -198,7 +198,7 @@ jobs:
           unzip -d ./ -q webui.zip
           rm webui.zip
           rm -rf bin/webui
-          mkdir release
+          mkdir release -p
           mv Yacd-meta-gh-pages release/webui
 
       - name: set environment variables
