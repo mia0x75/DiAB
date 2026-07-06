@@ -219,7 +219,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           cd hiddify/hiddify-core
-          go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -tags=${{ env.tags }} -o release/hiddify ./cli
+          go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -tags=${{ env.tags }} -o release/hiddify ./cmd/main
           upx --lzma release/hiddify
           echo "status=success" >> $GITHUB_OUTPUT
 
