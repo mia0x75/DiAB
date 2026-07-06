@@ -207,9 +207,9 @@ jobs:
           commit=$(git log --pretty=format:"%h" -1)
           ldflags="\
             -buildid= \
-            -w -s "
+            -w -s -checklinkname=0 -buildid=${{ env.VERSION }}"
           echo "ldflags=$ldflags" >> $GITHUB_ENV
-          echo "tags=with_gvisor,with_quic,with_wireguard,with_ech,with_utls,with_clash_api,with_grpc,with_dhcp,with_low_memory,with_conntrack" >> $GITHUB_ENV
+          echo "tags=with_gvisor,with_quic,with_wireguard,with_utls,with_clash_api,with_grpc,with_awg,tfogo_checklinkname0,with_naive_outbound,with_conntrack,with_dhcp,with_low_memory,with_purego" >> $GITHUB_ENV
           echo "version=$releaseVersion" >> $GITHUB_OUTPUT
             
       - name: build application
@@ -219,7 +219,8 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           cd hiddify/hiddify-core
-          go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -tags=${{ env.tags }} -o release/hiddify ./cmd/main
+          
+          go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ steps.variables.outputs.ldflags }}" -tags=${{ steps.variables.outputs.tags }} -o release/hiddify ./cmd/main
           upx --lzma release/hiddify
           echo "status=success" >> $GITHUB_OUTPUT
 
