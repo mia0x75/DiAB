@@ -193,7 +193,7 @@
     "repo": "smartdns",
     "alias": "",
     "type": 1,
-    "test": "^Release\\s+[0-9]+(\\.[0-9]+)?$",
+    "test": "^Release[0-9]+(\\.[0-9]+)?$",
     "replace": "s/Release/v/g",
     "version": "v48.2"
   }
