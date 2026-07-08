@@ -52,6 +52,7 @@ jobs:
             if [ -n "$test" ]; then
               # 遍历 list 中的每一行
               while IFS= read -r element; do
+                echo "[INFO] 发现：${owner}/${name} ${element}"
                 if echo "$element" | grep -Eq "$test"; then
                   if [ -z "$latest" ] || [ "$(printf "%s\n%s" "$element" "$latest" | sort -V | tail -n1)" = "$element" ]; then
                     latest=$element
