@@ -8,7 +8,7 @@ RUN set -ex \
   && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
   && apk update \
   && apk upgrade \
-  && apk add --no-cache bash curl jq gcc git go musl-dev
+  && apk add --no-cache bash curl jq gcc git go musl-dev upx
 
 RUN git clone --single-branch https://github.com/OpenListTeam/OpenList /app
 
@@ -46,6 +46,7 @@ RUN set -ex \
   && go build -v -trimpath -ldflags "$ldflags" -tags=jsoniter -o /release/opt/openlist/openlist . \
   && mkdir -p /release/opt/openlist/data \
   && cp entrypoint.sh /release/ \
+  && upx --lzma --best /release/opt/openlist/openlist \
   && echo "[INFO] Build completed successfully"
 
 FROM alpine:latest
