@@ -134,7 +134,9 @@ jobs:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
           platforms: linux/amd64, linux/arm64
-          build-args: BRANCH=${{ env.VERSION }}
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            BUILD_DATE=${{ needs.check-version.outputs.build_date }}
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
