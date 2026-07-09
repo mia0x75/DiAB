@@ -23,3 +23,5 @@
 | 21 | mediamtx | v1.19.2 |
 | 22 | eiblog | v3.1.1 |
 | 23 | OpenList | v4.2.3 |
+| 24 | LightCMS | v0.2.3 |
+| 25 | blocky | v0.2.3 |
