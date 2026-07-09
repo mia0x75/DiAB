@@ -178,7 +178,7 @@ jobs:
           project_path: "./"                                                      # 在哪里运行 go build 命令。
           binary_name: "${{ env.BINARY }}"                                        # 二进制名称
           build_flags: "-v -x -a"                                                 # 传递给 go build 命令的其他参数
-          ldflags: "-s -w"                                                        # ldflags参数
+          ldflags: "-s -w -X github.com/0xERR0R/blocky/util.Version=${{ env.VERSION }} -X github.com/0xERR0R/blocky/util.BuildTime=${{ env.BUILD_DATE }} -X github.com/0xERR0R/blocky/util.Architecture=General" # ldflags参数
           md5sum: "false"
           release_tag: "${{ env.APP_NAME }}-${{ env.VERSION }}"                   # 上传的标签
           release_name: "${{ env.APP_NAME }}-${{ env.VERSION }}"                  # 上传的名字
