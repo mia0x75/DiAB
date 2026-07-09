@@ -10,29 +10,32 @@ RUN set -ex \
 
 RUN git clone --single-branch https://github.com/0xERR0R/blocky /app
 
-WORKDIR /app/
+WORKDIR /app
 
 # Download dependencies (cached layer unless go.mod/go.sum change)
-RUN go mod download
-
-# 设置构建时间和版本
-RUN builtAt="$(date +'%F %T %z')" && \
-    echo "$builtAt" > /tmp/build_time.txt
+RUN go mod tidy && go mod download
 
 # 创建输出目录
 RUN mkdir -p /release/opt/blocky
 
 # 构建二进制文件
-RUN version="${BRANCH}" && \
-    builtAt=$(cat /tmp/build_time.txt) && \
-    ldflags="-w -s -X github.com/0xERR0R/blocky/util.Version=$version -X github.com/0xERR0R/blocky/util.BuildTime=$builtAt -X github.com/0xERR0R/blocky/util.Architecture=General" && \
-    go build -ldflags "$ldflags" -o /release/opt/blocky/blocky .
+RUN builtAt="$(date +'%F %T %z')" && \
+    version="${BRANCH:-$(git describe --abbrev=0 --tags 2>/dev/null || echo 'v0.0.0')}" && \
+    echo "[INFO] 待构建的版本: $version" && \
+    echo "[INFO] 构建日期: $builtAt" && \
+    ldflags=" \
+    -w -s \
+    -X 'github.com/0xERR0R/blocky/util.Version=$version' \
+    -X 'github.com/0xERR0R/blocky/util.BuildTime=$builtAt' \
+    -X 'github.com/0xERR0R/blocky/util.Architecture=General'" && \
+    echo "[INFO] 正在构建..." && \
+    go build -v -trimpath -ldflags "$ldflags" -o /release/opt/blocky/blocky .
 
 # 压缩二进制文件
 RUN upx --lzma --best /release/opt/blocky/blocky
 
 # 输出完成信息
-RUN echo "[INFO] Build completed successfully"
+RUN echo "[INFO] 构建完成。"
 
 FROM alpine:latest
 
