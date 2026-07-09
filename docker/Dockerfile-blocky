@@ -17,11 +17,10 @@ RUN go mod download
 
 RUN builtAt="$(date +'%F %T %z')" \
   && version="${BRANCH}" \
+  && mkdir -p /release/opt/blocky \
   && ldflags=" \
     -w -s \
-	  -X github.com/0xERR0R/blocky/util.Version=$version \
-	  -X github.com/0xERR0R/blocky/util.BuildTime=$builtAt \
-	  -X github.com/0xERR0R/blocky/util.Architecture=General" \
+	  -X github.com/0xERR0R/blocky/util.Version=$version -X github.com/0xERR0R/blocky/util.BuildTime=$builtAt -X github.com/0xERR0R/blocky/util.Architecture=General" \
   && echo "[INFO] Building binary..." \
   && go build -v -trimpath -ldflags "$ldflags" -o /release/opt/blocky/blocky . \
   && upx --lzma --best /release/opt/blocky/blocky \
