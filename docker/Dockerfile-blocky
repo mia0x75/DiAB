@@ -15,14 +15,24 @@ WORKDIR /app/
 # Download dependencies (cached layer unless go.mod/go.sum change)
 RUN go mod download
 
-RUN builtAt="$(date +'%F %T %z')" \
-  && version="${BRANCH}" \
-  && mkdir -p /release/opt/blocky \
-  && ldflags="-w -s -X github.com/0xERR0R/blocky/util.Version=$version -X github.com/0xERR0R/blocky/util.BuildTime=$builtAt -X github.com/0xERR0R/blocky/util.Architecture=General" \
-  && echo "[INFO] Building binary..." \
-  && go build -v -trimpath -ldflags "$ldflags" -o /release/opt/blocky/blocky . \
-  && upx --lzma --best /release/opt/blocky/blocky \
-  && echo "[INFO] Build completed successfully"
+# 设置构建时间和版本
+RUN builtAt="$(date +'%F %T %z')" && \
+    echo "$builtAt" > /tmp/build_time.txt
+
+# 创建输出目录
+RUN mkdir -p /release/opt/blocky
+
+# 构建二进制文件
+RUN version="${BRANCH}" && \
+    builtAt=$(cat /tmp/build_time.txt) && \
+    ldflags="-w -s -X github.com/0xERR0R/blocky/util.Version=$version -X github.com/0xERR0R/blocky/util.BuildTime=$builtAt -X github.com/0xERR0R/blocky/util.Architecture=General" && \
+    go build -ldflags "$ldflags" -o /release/opt/blocky/blocky .
+
+# 压缩二进制文件
+RUN upx --lzma --best /release/opt/blocky/blocky
+
+# 输出完成信息
+RUN echo "[INFO] Build completed successfully"
 
 FROM alpine:latest
 
