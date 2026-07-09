@@ -202,8 +202,8 @@
     "repo": "blocky",
     "alias": "",
     "type": 1,
-    "test": "^Release[0-9]+(\\.[0-9]+)?$",
-    "replace": "s/Release/v/g",
+    "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+    "replace": "",
     "version": "v0.0.0"
   },
   {
