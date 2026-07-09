@@ -16,7 +16,7 @@ WORKDIR /app/
 RUN go mod download
 
 RUN builtAt="$(date +'%F %T %z')" \
-  && version="${BRANCH:-$(git describe --abbrev=0 --tags 2>/dev/null || echo 'v0.0.0')}" \
+  && version="${BRANCH}" \
   && ldflags=" \
     -w -s \
 	  -X github.com/0xERR0R/blocky/util.Version=$version \
