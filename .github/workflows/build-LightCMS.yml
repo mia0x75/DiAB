@@ -60,7 +60,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/releases" | awk -F '"' '/tag_name/{print $(NF-1)}')
+          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/tags" | awk -F '"' '/tag_name/{print $(NF-1)}')
           LATEST_VERSION=$(grep -vm1 '-' <<< "$LIST")
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
 
@@ -168,7 +168,7 @@ jobs:
         with:
           repository: "${{ env.GITHUB_REPO }}"
           ref: "${{ env.VERSION }}"
-          fetch-depth: 1
+          fetch-depth: 0
           
       - name: build releases
         uses: mia0x75/go-release-action@master
