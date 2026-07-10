@@ -21,7 +21,6 @@ jobs:
     name: "process dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
-      version: ${{ steps.check-repo-dispatch.outputs.version }}
     steps:
       - id: check-repo-dispatch
         run: |
