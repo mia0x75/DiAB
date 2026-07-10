@@ -65,8 +65,7 @@ jobs:
           SHAS=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/commits?per_page=2" | jq -r ".[].sha")
           SHA=$(grep -vm1 '-' <<< "$SHAS")
 
-          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/releases" | awk -F '"' '/tag_name/{print $(NF-1)}')
-          LATEST_VERSION=$(grep -vm1 '-' <<< "$LIST")
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
 
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
