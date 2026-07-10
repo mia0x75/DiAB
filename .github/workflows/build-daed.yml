@@ -22,7 +22,6 @@ jobs:
     name: "process-dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
-      version: ${{ steps.check-repo-dispatch.outputs.version }}
     steps:
       - id: check-repo-dispatch
         run: |
@@ -38,7 +37,6 @@ jobs:
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "version=${{ github.event.client_payload.version }}" >> $GITHUB_OUTPUT
           else
             echo "[ERROR] 仓库名称确认失败"
             echo "status=failure" >> $GITHUB_OUTPUT
@@ -63,7 +61,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LATEST_VERSION=${{ needs.process-dispatch.outputs.version }}
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
 
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
