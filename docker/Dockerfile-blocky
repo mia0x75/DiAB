@@ -1,0 +1,51 @@
+FROM alpine:latest AS builder
+ARG BRANCH
+ENV CGO_ENABLED=0
+
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache bash curl jq gcc git go musl-dev upx make coreutils libcap
+
+RUN git clone --single-branch https://github.com/0xERR0R/blocky /app
+
+WORKDIR /app
+
+# Download dependencies (cached layer unless go.mod/go.sum change)
+RUN go mod tidy && go mod download
+
+# 创建输出目录
+RUN mkdir -p /release/opt/blocky
+
+# 构建二进制文件
+RUN builtAt="$(date +'%F %T %z')" && \
+    version="${BRANCH:-$(git describe --abbrev=0 --tags 2>/dev/null || echo 'v0.0.0')}" && \
+    echo "[INFO] 待构建的版本: $version" && \
+    echo "[INFO] 构建日期: $builtAt" && \
+    ldflags=" \
+    -w -s \
+    -X 'github.com/0xERR0R/blocky/util.Version=$version' \
+    -X 'github.com/0xERR0R/blocky/util.BuildTime=$builtAt' \
+    -X 'github.com/0xERR0R/blocky/util.Architecture=General'" && \
+    echo "[INFO] 正在构建..." && \
+    go build -v -trimpath -ldflags "$ldflags" -o /release/opt/blocky/blocky .
+
+# 压缩二进制文件
+RUN upx --lzma --best /release/opt/blocky/blocky
+
+# 输出完成信息
+RUN echo "[INFO] 构建完成。"
+
+FROM alpine:latest
+
+USER 100
+WORKDIR /opt/blocky
+
+COPY --from=builder /release /
+
+ENV BLOCKY_CONFIG_FILE=/opt/blocky/config.yml
+
+ENTRYPOINT ["/opt/blocky/blocky"]
+
+HEALTHCHECK --start-period=1m --timeout=3s CMD ["/opt/blocky/blocky", "healthcheck"]

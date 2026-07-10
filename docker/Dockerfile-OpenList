@@ -1,0 +1,71 @@
+FROM alpine:latest AS builder
+WORKDIR /app/
+ARG BRANCH
+ENV CGO_ENABLED=0
+ENV FRONTEND_REPO="OpenListTeam/OpenList-Frontend"
+
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache bash curl jq gcc git go musl-dev upx
+
+RUN git clone --single-branch https://github.com/OpenListTeam/OpenList /app
+
+WORKDIR /app
+
+RUN set -ex \
+  && go mod tidy \
+  && go mod download
+
+RUN set -ex \
+  && appName="openlist" \
+  && builtAt="$(date +'%F %T %z')" \
+  && gitAuthor="The OpenList Projects Contributors <noreply@openlist.team>" \
+  && gitCommit=$(git log --pretty=format:"%h" -1) \
+  && version="${BRANCH:-$(git describe --abbrev=0 --tags 2>/dev/null || echo 'v0.0.0')}" \
+  && echo "[INFO] Building OpenList version: $version" \
+  && echo "[INFO] Fetching frontend assets..." \
+  && release_json=$(curl -fsSL --max-time 2 "https://api.github.com/repos/$FRONTEND_REPO/releases/latest") \
+  && release_assets=$(echo "$release_json" | jq -r '.assets[].browser_download_url') \
+  && release_tar_url=$(echo "$release_assets" | grep "openlist-frontend-dist" | grep -v "lite" | grep "\.tar\.gz$" | head -n 1) \
+  && curl -fsSL "$release_tar_url" -o dist.tar.gz \
+  && rm -rf public/dist && mkdir -p public/dist \
+  && tar -zxvf dist.tar.gz -C public/dist \
+  && rm -rf dist.tar.gz \
+  && webVersion=$(echo "$release_json" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g') \
+  && echo "[INFO] Frontend version: $webVersion" \
+  && ldflags=" \
+    -w -s \
+    -X 'github.com/OpenListTeam/OpenList/v4/internal/conf.BuiltAt=$builtAt' \
+    -X 'github.com/OpenListTeam/OpenList/v4/internal/conf.GitAuthor=$gitAuthor' \
+    -X 'github.com/OpenListTeam/OpenList/v4/internal/conf.GitCommit=$gitCommit' \
+    -X 'github.com/OpenListTeam/OpenList/v4/internal/conf.Version=$version' \
+    -X 'github.com/OpenListTeam/OpenList/v4/internal/conf.WebVersion=$webVersion'" \
+  && echo "[INFO] Building binary..." \
+  && go build -v -trimpath -ldflags "$ldflags" -tags=jsoniter -o /release/opt/openlist/openlist . \
+  && mkdir -p /release/opt/openlist/data \
+  && cp entrypoint.sh /release/ \
+  && upx --lzma --best /release/opt/openlist/openlist \
+  && echo "[INFO] Build completed successfully"
+
+FROM alpine:latest
+
+WORKDIR /opt/openlist/
+
+RUN set -ex \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache bash ca-certificates tzdata \
+  && rm -rf /var/cache/apk/*
+
+COPY --from=builder /release /
+
+RUN chmod +x /entrypoint.sh
+
+RUN /entrypoint.sh version
+
+ENV TZ=Asia/Shanghai
+VOLUME /opt/openlist/data/
+EXPOSE 5244 5245
+CMD [ "/entrypoint.sh" ]
