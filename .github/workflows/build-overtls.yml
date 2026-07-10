@@ -60,9 +60,9 @@ jobs:
         run: |
           LATEST_VERSION="${{ github.event.client_payload.version }}"
           DATE=$(date "+%Y/%m/%d")
-          COMMIT="Build ${{ env.APP_NAME }} $LATEST_RELEASE by Github Actions, $DATE"
+          COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
 
-          echo "version=$LATEST_RELEASE" >> $GITHUB_OUTPUT
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
 
