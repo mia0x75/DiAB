@@ -45,7 +45,7 @@ jobs:
     needs: process-dispatch
     if: ${{ needs.process-dispatch.outputs.status == 'success' }}
     runs-on: ubuntu-latest
-    name: "check version"
+    name: "check-version"
     outputs:
       version: ${{ steps.get-version.outputs.version }}
       commit: ${{ steps.get-version.outputs.commit }}
