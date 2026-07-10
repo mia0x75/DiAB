@@ -63,7 +63,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LATEST_VERSION=${{ needs.process-dispatch.outputs.version }}
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
           
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
