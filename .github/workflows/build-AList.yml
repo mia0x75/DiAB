@@ -21,7 +21,6 @@ jobs:
     name: "process dispatch"
     outputs:
       status: ${{ steps.check-repo-dispatch.outputs.status }}
-      version: ${{ steps.check-repo-dispatch.outputs.version }}
     steps:
       - id: check-repo-dispatch
         run: |
@@ -62,7 +61,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LATEST_VERSION=${{ needs.process-dispatch.outputs.version }}
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
           
           SRC_CMD_PKG="github.com/alist-org/alist/v3/internal/"
