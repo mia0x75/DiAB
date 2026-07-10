@@ -8,7 +8,7 @@ RUN set -ex \
   && apk upgrade \
   && apk add --no-cache bash git go upx
 
-RUN git clone --single-branch https://github.com/jonradoff/lightcms /app
+RUN git clone --single-branch -b $BRANCH https://github.com/jonradoff/lightcms /app
 
 WORKDIR /app
 
