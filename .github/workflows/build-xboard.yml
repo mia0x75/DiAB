@@ -59,8 +59,7 @@ jobs:
       - name: check version
         id: get-version
         run: |
-          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/${{ env.GITHUB_REPO }}/tags" | awk -F '"' '/name/{print $(NF-1)}')
-          LATEST_VERSION=$(grep -vm1 '-' <<< "$LIST")
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
             
