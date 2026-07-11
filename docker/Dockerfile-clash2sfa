@@ -4,6 +4,8 @@ ARG TARGETOS TARGETARCH BRANCH
 ENV CGO_ENABLED=0
 ENV GOOS=$TARGETOS
 ENV GOARCH=$TARGETARCH
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
 
 RUN set -ex \
   && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \

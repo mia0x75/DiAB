@@ -2,6 +2,8 @@ FROM --platform=${TARGETPLATFORM} golang:alpine AS builder
 
 ARG APP_VERSION="undefined"
 ARG BUILD_TIME="undefined"
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
 
 COPY . /src
 

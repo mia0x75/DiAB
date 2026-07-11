@@ -1,7 +1,9 @@
 FROM alpine:latest AS builder
 WORKDIR /app/
 ARG BRANCH
+ARG GOAMD64_VERSION=v1
 ENV CGO_ENABLED=0
+ENV GOAMD64=$GOAMD64_VERSION
 ENV FRONTEND_REPO="OpenListTeam/OpenList-Frontend"
 
 RUN set -ex \

@@ -1,12 +1,12 @@
 name: "Auto Build hiddify"
 
 env:
-  DOCKER_REPO: 'hiddify'
-  GITHUB_REPO: 'hiddify/hiddify-core'
-  DOCKER_FILE: 'Dockerfile-hiddify'
-  APP_NAME: 'hiddify'
-  WORK_DIR: 'hiddify/hiddify-core'
-  
+  DOCKER_REPO: "hiddify"
+  GITHUB_REPO: "hiddify/hiddify-core"
+  DOCKER_FILE: "Dockerfile-hiddify"
+  APP_NAME: "hiddify"
+  WORK_DIR: "hiddify/hiddify-core"
+
 on:
   repository_dispatch:
     types: [Auto Build hiddify]
@@ -28,13 +28,13 @@ jobs:
         run: |
           EXPECTED_REPO="${{ env.GITHUB_REPO }}"
           ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
-          
+
           echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
           echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
           echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
           echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
           echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
-          
+
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
@@ -43,7 +43,7 @@ jobs:
             echo "[ERROR] 仓库名称确认失败"
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
-          
+
   check-version:
     needs: process-dispatch
     if: ${{ needs.process-dispatch.outputs.status == 'success' }}
@@ -65,11 +65,11 @@ jobs:
         run: |
           LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
-          
+
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
-          
+
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
@@ -127,7 +127,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: push images to dockerhub
+      - name: Build and push Default (v3) image
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
@@ -135,10 +135,27 @@ jobs:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
           platforms: linux/amd64, linux/arm64
-          build-args: BRANCH=${{ env.VERSION }}
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v3
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
+
+      - name: Build and push Compat (v1) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v1
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest-compat
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}-compat
 
   build-releases:
     needs: check-version
@@ -196,12 +213,12 @@ jobs:
       - name: prepare frontend assets
         run: |
           cd ${{ env.WORK_DIR }}
-          
+
           echo "Downloading Yacd-meta UI assets..."
           curl -fsSL -o webui.zip https://github.com/hiddify/Yacd-meta/archive/gh-pages.zip
           unzip -d ./ -q webui.zip
           rm webui.zip
-          
+
           mkdir -p release
           rm -rf bin/webui
           mv Yacd-meta-gh-pages release/webui
@@ -211,9 +228,10 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOAMD64: v3
         run: |
           cd ${{ env.WORK_DIR }}
-          
+
           echo "Building ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }} v${{ env.VERSION }}..."
           go build \
             -v \
@@ -222,10 +240,10 @@ jobs:
             -tags=${{ env.BUILD_TAGS }} \
             -o release/${{ env.BINARY }} \
             ./cmd/main
-          
+
           echo "Compressing binary with UPX..."
           upx --lzma release/${{ env.BINARY }}
-          
+
           echo "Build completed successfully"
           echo "status=success" >> $GITHUB_OUTPUT
 
@@ -278,7 +296,7 @@ jobs:
 
           git checkout --orphan tmp_work
           git branch -d main
-          
+
           sed -i -E 's/(\|\s*${{ env.APP_NAME }}\s*\|)\s*\S+\s*\|/\1 ${{ env.VERSION }} \|/' README.md
 
           # Update repos.json

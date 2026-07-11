@@ -15,6 +15,8 @@ ARG TARGETARCH
 WORKDIR /src
 COPY . .
 
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
 ENV CGO_ENABLED=0
 RUN if [ ! -f syncthing-linux-$TARGETARCH ] ; then \
     go run build.go -no-upgrade build syncthing ; \

@@ -3,12 +3,12 @@ name: "Auto Build mediamtx"
 on:
   repository_dispatch:
     types: [Auto Build mediamtx]
-    
+
 env:
-  DOCKER_REPO: 'mediamtx'
-  GITHUB_REPO: 'bluenviron/mediamtx'
-  DOCKER_FILE: 'Dockerfile-mediamtx'
-  APP_NAME: 'mediamtx'
+  DOCKER_REPO: "mediamtx"
+  GITHUB_REPO: "bluenviron/mediamtx"
+  DOCKER_FILE: "Dockerfile-mediamtx"
+  APP_NAME: "mediamtx"
 
 permissions:
   contents: write
@@ -27,13 +27,13 @@ jobs:
         run: |
           EXPECTED_REPO="${{ env.GITHUB_REPO }}"
           ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
-          
+
           echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
           echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
           echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
           echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
           echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
-          
+
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
@@ -68,12 +68,11 @@ jobs:
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME}} $LATEST_VERSION by Github Actions, $DATE"
-          
+
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
-
 
   create-release:
     needs: check-version
@@ -99,7 +98,6 @@ jobs:
           draft: false
           prerelease: false
           overwrite: true
-
 
   build-docker-image:
     needs: check-version
@@ -128,7 +126,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: push images to dockerhub
+      - name: Build and push Default (v3) image
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
@@ -136,11 +134,27 @@ jobs:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
           platforms: linux/amd64, linux/arm64
-          build-args: BRANCH=${{ env.VERSION }}
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v3
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
 
+      - name: Build and push Compat (v1) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v1
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest-compat
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}-compat
 
   build-releases:
     needs: check-version
@@ -148,6 +162,7 @@ jobs:
     name: build releases
     env:
       CGO_ENABLED: 0
+      GOAMD64: v3
       BINARY: mediamtx
       VERSION: ${{ needs.check-version.outputs.version }}
       GO_VERSION: ${{ needs.check-version.outputs.go_version }}
@@ -174,23 +189,22 @@ jobs:
       - name: build releases
         uses: mia0x75/go-release-action@master
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}                                                                           # 你的 GITHUB_TOKEN 用于将版本上传到 Github Release。
-          goos: ${{ matrix.goos }}                                                                                            # 运行程序的操作系统
-          goarch: ${{ matrix.goarch }}                                                                                        # 运行程序的架构
-          goversion: ${{ env.GO_VERSION }}                                                                                    # Go 编译环境版本
+          github_token: ${{ secrets.GITHUB_TOKEN }} # 你的 GITHUB_TOKEN 用于将版本上传到 Github Release。
+          goos: ${{ matrix.goos }} # 运行程序的操作系统
+          goarch: ${{ matrix.goarch }} # 运行程序的架构
+          goversion: ${{ env.GO_VERSION }} # Go 编译环境版本
           pre_command: "go generate ./..."
-          project_path: "."                                                                                                   # 在哪里运行 go build 命令。
-          binary_name: "${{ env.BINARY }}"                                                                                    # 二进制名称
-          build_flags: "-trimpath"                                                                                            # 传递给 go build 命令的其他参数
+          project_path: "." # 在哪里运行 go build 命令。
+          binary_name: "${{ env.BINARY }}" # 二进制名称
+          build_flags: "-trimpath" # 传递给 go build 命令的其他参数
           ldflags: "-extldflags -static -s -w" # ldflags参数
           md5sum: "false"
-          release_tag: "${{ env.APP_NAME }}-${{ env.VERSION }}"                                                               # 上传的标签
-          release_name: "${{ env.APP_NAME }}-${{ env.VERSION }}"                                                              # 上传的名字
-          compress_assets: "auto"                                                                                             # 自定义打包
-          overwrite: true                                                                                                     # 覆盖
-          asset_name: "${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}"                                             # 自定义名称
-  
-  
+          release_tag: "${{ env.APP_NAME }}-${{ env.VERSION }}" # 上传的标签
+          release_name: "${{ env.APP_NAME }}-${{ env.VERSION }}" # 上传的名字
+          compress_assets: "auto" # 自定义打包
+          overwrite: true # 覆盖
+          asset_name: "${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}" # 自定义名称
+
   update-repo:
     needs:
       - check-version
@@ -213,7 +227,7 @@ jobs:
       - name: mark
         run: |
           sudo apt-get install -y jq
-          
+
           git checkout --orphan tmp_work
           git branch -d main
 
@@ -224,7 +238,7 @@ jobs:
           jq --arg owner "$owner" --arg repo "$repo" --arg new_version "${{ env.VERSION }}" \
               'map(if .owner == $owner and .repo == $repo then .version = $new_version else . end)' \
               .github/workflows/repos.json > update_repos.json
-          mv update_repos.json .github/workflows/repos.json 
+          mv update_repos.json .github/workflows/repos.json
 
       - name: upload to repository
         uses: stefanzweifel/git-auto-commit-action@v7

@@ -1,11 +1,11 @@
 name: "Auto Build hysteria"
 
 env:
-  DOCKER_REPO: 'hysteria'
-  GITHUB_REPO: 'apernet/hysteria'
-  DOCKER_FILE: 'Dockerfile-hysteria'
-  APP_NAME: 'hysteria'
-  
+  DOCKER_REPO: "hysteria"
+  GITHUB_REPO: "apernet/hysteria"
+  DOCKER_FILE: "Dockerfile-hysteria"
+  APP_NAME: "hysteria"
+
 on:
   repository_dispatch:
     types: [Auto Build hysteria]
@@ -26,13 +26,13 @@ jobs:
         run: |
           EXPECTED_REPO="${{ env.GITHUB_REPO }}"
           ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
-          
+
           echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
           echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
           echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
           echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
           echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
-          
+
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
@@ -40,7 +40,7 @@ jobs:
             echo "[ERROR] 仓库名称确认失败"
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
-          
+
   check-version:
     needs: process-dispatch
     if: ${{ needs.process-dispatch.outputs.status == 'success' }}
@@ -64,20 +64,19 @@ jobs:
         run: |
           LATEST_VERSION="${{ github.event.client_payload.version }}"
           GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
-          
+
           SRC_CMD_PKG="github.com/apernet/hysteria/app/v2/cmd"
 
           BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
-          
+
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
           echo "src_cmd_pkg=$SRC_CMD_PKG" >> $GITHUB_OUTPUT
           echo "tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-
 
   create-release:
     needs: check-version
@@ -104,7 +103,6 @@ jobs:
           prerelease: false
           overwrite: true
 
-  
   build-docker-image:
     needs: check-version
     runs-on: ubuntu-latest
@@ -132,7 +130,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: push images to dockerhub
+      - name: Build and push Default (v3) image
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
@@ -140,18 +138,35 @@ jobs:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
           platforms: linux/amd64, linux/arm64
-          build-args: BRANCH=${{ env.VERSION }}
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v3
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
 
-  
+      - name: Build and push Compat (v1) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v1
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest-compat
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}-compat
+
   build-releases:
     needs: check-version
     runs-on: ubuntu-latest
     name: build releases
     env:
       CGO_ENABLED: 0
+      GOAMD64: v3
       BINARY: hysteria
       VERSION: ${{ needs.check-version.outputs.version }}
       GO_VERSION: ${{ needs.check-version.outputs.go_version }}
@@ -179,7 +194,7 @@ jobs:
       - name: get the current commit
         id: get-commit
         run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-        
+
       - name: build releases
         uses: mia0x75/go-release-action@master
         with:
@@ -197,8 +212,7 @@ jobs:
           compress_assets: "auto" # 自定义打包
           overwrite: true # 覆盖
           asset_name: "${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}" # 自定义名称
-  
-  
+
   update-repo:
     needs:
       - check-version
@@ -224,7 +238,7 @@ jobs:
 
           git checkout --orphan tmp_work
           git branch -d main
-          
+
           sed -i -E 's/(\|\s*${{ env.APP_NAME }}\s*\|)\s*\S+\s*\|/\1 ${{ env.VERSION }} \|/' README.md
 
           # Update repos.json

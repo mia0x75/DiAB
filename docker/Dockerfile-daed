@@ -33,6 +33,8 @@ WORKDIR /src
 COPY --from=web-builder /src /src
 
 WORKDIR /src/wing
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
 ENV CGO_ENABLED=0
 
 # 执行官方的 bundle 编译指令：

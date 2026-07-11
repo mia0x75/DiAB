@@ -1,11 +1,11 @@
 name: "Auto Build subconverter"
 
 env:
-  DOCKER_REPO: 'subconverter'
-  GITHUB_REPO: 'tindy2013/subconverter'
-  DOCKER_FILE: 'Dockerfile-subconverter'
-  APP_NAME: 'subconverter'
-  
+  DOCKER_REPO: "subconverter"
+  GITHUB_REPO: "tindy2013/subconverter"
+  DOCKER_FILE: "Dockerfile-subconverter"
+  APP_NAME: "subconverter"
+
 on:
   repository_dispatch:
     types: [Auto Build subconverter]
@@ -26,13 +26,13 @@ jobs:
         run: |
           EXPECTED_REPO="${{ env.GITHUB_REPO }}"
           ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
-          
+
           echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
           echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
           echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
           echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
           echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
-          
+
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
@@ -64,7 +64,7 @@ jobs:
           LATEST_VERSION="${{ github.event.client_payload.version }}"
           DATE=$(date "+%Y/%m/%d")
           COMMIT="Build ${{ env.APP_NAME }} $LATEST_VERSION by Github Actions, $DATE"
-            
+
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
@@ -83,7 +83,6 @@ jobs:
           LATEST_VERSION=$(grep -vm1 '-' <<< "$LIST")
 
           echo "libcron-version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-
 
   create-release:
     needs: check-version
@@ -110,7 +109,6 @@ jobs:
           prerelease: false
           overwrite: true
 
-  
   build-docker-image:
     needs: check-version
     runs-on: ubuntu-latest
@@ -140,7 +138,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: push images to dockerhub
+      - name: Build and push Default (v3) image
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
@@ -156,7 +154,6 @@ jobs:
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
 
-  
   update-repo:
     needs:
       - check-version
@@ -181,7 +178,7 @@ jobs:
           git branch -d main
 
           sed -i -E 's/(\|\s*${{ env.APP_NAME }}\s*\|)\s*\S+\s*\|/\1 ${{ env.VERSION }} \|/' README.md
-          
+
           # Update repos.json
           IFS='/' read -r owner repo <<< "${{ env.GITHUB_REPO }}"
           jq --arg owner "$owner" --arg repo "$repo" --arg new_version "${{ env.VERSION }}" \

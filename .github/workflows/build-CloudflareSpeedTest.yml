@@ -1,15 +1,15 @@
 name: "Auto Build CloudflareSpeedTest"
 
 env:
-  DOCKER_REPO: 'cf-speedtest'
-  GITHUB_REPO: 'XIU2/CloudflareSpeedTest'
-  DOCKER_FILE: 'Dockerfile-CloudflareSpeedTest'
-  APP_NAME: 'CloudflareSpeedTest'
-  
+  DOCKER_REPO: "cf-speedtest"
+  GITHUB_REPO: "XIU2/CloudflareSpeedTest"
+  DOCKER_FILE: "Dockerfile-CloudflareSpeedTest"
+  APP_NAME: "CloudflareSpeedTest"
+
 on:
   repository_dispatch:
     types: [Auto Build CloudflareSpeedTest]
-    
+
 permissions:
   contents: write
   packages: write
@@ -26,13 +26,13 @@ jobs:
         run: |
           EXPECTED_REPO="${{ env.GITHUB_REPO }}"
           ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
-          
+
           echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
           echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
           echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
           echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
           echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
-          
+
           if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
             echo "[INFO] 仓库名称确认成功"
             echo "status=success" >> $GITHUB_OUTPUT
@@ -40,7 +40,7 @@ jobs:
             echo "[ERROR] 仓库名称确认失败"
             echo "status=failure" >> $GITHUB_OUTPUT
           fi
-          
+
   check-version:
     needs: process-dispatch
     if: ${{ needs.process-dispatch.outputs.status == 'success' }}
@@ -69,7 +69,6 @@ jobs:
           COMMIT="Build ${{ env.APP_NAME }} $LASTEST_VERSION by Github Actions, $DATE"
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
 
-  
   create-release:
     needs: check-version
     runs-on: ubuntu-latest
@@ -94,7 +93,6 @@ jobs:
           draft: false
           prerelease: false
           overwrite: true
-
 
   build-docker-image:
     needs: check-version
@@ -123,7 +121,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: push images to dockerhub
+      - name: Build and push Default (v3) image
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
@@ -131,11 +129,27 @@ jobs:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
           platforms: linux/amd64, linux/arm64
-          build-args: TAG=${{ env.VERSION }}
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v3
           tags: |
             ${{ env.DOCKERHUB_REPOSITORY }}:latest
             ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
-  
+
+      - name: Build and push Compat (v1) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v1
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest-compat
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}-compat
 
   build-releases:
     needs: check-version
@@ -143,6 +157,7 @@ jobs:
     name: build releases
     env:
       CGO_ENABLED: 0
+      GOAMD64: v3
       BINARY: CloudflareSpeedTest
       VERSION: ${{ needs.check-version.outputs.version }}
       GO_VERSION: ${{ needs.check-version.outputs.go_version }}
@@ -183,7 +198,6 @@ jobs:
           overwrite: true # 覆盖
           asset_name: "${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}" # 自定义名称
 
-
   update-repo:
     needs:
       - check-version
@@ -206,7 +220,7 @@ jobs:
       - name: mark
         run: |
           sudo apt-get install -y jq
-          
+
           git checkout --orphan tmp_work
           git branch -d main
 
@@ -217,7 +231,7 @@ jobs:
           jq --arg owner "$owner" --arg repo "$repo" --arg new_version "${{ env.VERSION }}" \
               'map(if .owner == $owner and .repo == $repo then .version = $new_version else . end)' \
               .github/workflows/repos.json > update_repos.json
-          mv update_repos.json .github/workflows/repos.json 
+          mv update_repos.json .github/workflows/repos.json
 
       - name: upload to repository
         uses: stefanzweifel/git-auto-commit-action@v7
