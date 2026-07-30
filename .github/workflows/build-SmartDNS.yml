@@ -67,7 +67,7 @@ jobs:
 
           echo "commit=$COMMIT" >> $GITHUB_OUTPUT
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
-          TAG= "${LATEST_VERSION/v/Release}"
+          TAG="${LATEST_VERSION/v/Release}"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
   create-release:
