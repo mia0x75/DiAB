@@ -1,0 +1,317 @@
+name: "Auto Build daed"
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [Auto Build daed]
+
+env:
+  DOCKER_REPO: "daed"
+  GITHUB_REPO: "daeuniverse/daed"
+  DOCKER_FILE: "Dockerfile-daed"
+  APP_NAME: "daed"
+
+permissions:
+  contents: write
+  packages: write
+  actions: write
+
+jobs:
+  process-dispatch:
+    runs-on: ubuntu-latest
+    name: "process-dispatch"
+    outputs:
+      status: ${{ steps.check-repo-dispatch.outputs.status }}
+    steps:
+      - id: check-repo-dispatch
+        run: |
+          EXPECTED_REPO="${{ env.GITHUB_REPO }}"
+          ACTUAL_REPO="${{ github.event.client_payload.owner }}/${{ github.event.client_payload.repo }}"
+
+          echo "[INFO] 期望的仓库名称: $EXPECTED_REPO"
+          echo "[INFO] 实际的仓库名称: $ACTUAL_REPO"
+          echo "[INFO] 事件载荷的属主: ${{ github.event.client_payload.owner }}"
+          echo "[INFO] 事件载荷的仓库: ${{ github.event.client_payload.repo }}"
+          echo "[INFO] 接受的完整载荷: ${{ toJSON(github.event.client_payload) }}"
+
+          if [ "$EXPECTED_REPO" = "$ACTUAL_REPO" ]; then
+            echo "[INFO] 仓库名称确认成功"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "[ERROR] 仓库名称确认失败"
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+  check-version:
+    needs: process-dispatch
+    if: ${{ needs.process-dispatch.outputs.status == 'success' }}
+    runs-on: ubuntu-latest
+    name: "check version"
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      commit: ${{ steps.get-version.outputs.commit }}
+      go_version: ${{ steps.get-version.outputs.go_version }}
+      build_date: ${{ steps.get-version.outputs.build_date }}
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: check version
+        id: get-version
+        run: |
+          LATEST_VERSION="${{ github.event.client_payload.version }}"
+          GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
+
+          BUILD_DATE=$(date +"%Y-%m-%d %H:%M.%S")
+          DATE=$(date "+%Y/%m/%d")
+          COMMIT="Build ${{ env.APP_NAME}} $LATEST_VERSION by Github Actions, $DATE"
+
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+
+  create-release:
+    needs: check-version
+    runs-on: ubuntu-latest
+    name: "Create release"
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
+      MSG: ${{ needs.check-version.outputs.commit }}
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.APP_NAME }}-${{ env.VERSION }}
+          name: ${{ env.APP_NAME }}-${{ env.VERSION }}
+          body: ${{ env.MSG }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-docker-image:
+    needs: check-version
+    runs-on: ubuntu-latest
+    name: "build docker image"
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      VERSION: ${{ needs.check-version.outputs.version }}
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: login to dockerhub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
+
+      - name: Build and push Default (v3) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v3
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}
+
+      - name: Build and push Compat (v1) image
+        uses: docker/build-push-action@v7
+        env:
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
+        with:
+          push: true
+          file: docker/${{ env.DOCKER_FILE }}
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+            GOAMD64_VERSION=v1
+          tags: |
+            ${{ env.DOCKERHUB_REPOSITORY }}:latest-compat
+            ${{ env.DOCKERHUB_REPOSITORY }}:${{ env.VERSION }}-compat
+
+  build-releases:
+    needs: check-version
+    runs-on: ubuntu-latest
+    name: build releases
+    env:
+      BINARY: daed
+      VERSION: ${{ needs.check-version.outputs.version }}
+      # 如果上一步没有传递这些变量，建议在这里写死默认值或从全局 env 获取
+
+    strategy:
+      matrix:
+        goos: [linux]
+        goarch: [amd64, arm64]
+
+    steps:
+      # 1. 检出代码（合并了你原有的两步，直接使用 recursive 递归拉取子模块）
+      - name: clone repository
+        uses: actions/checkout@v7
+        with:
+          repository: "${{ env.GITHUB_REPO }}"
+          ref: "${{ env.VERSION }}"
+          fetch-depth: 1
+          submodules: recursive # 关键：这一步自动处理了 git submodule update --init
+
+      # 2. 准备前端编译环境
+      - name: setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: install pnpm & build web ui
+        run: |
+          npm install -g pnpm
+          pnpm install
+          # Build dae-lsp package first to create dist/server.cjs
+          cd packages/dae-lang-core
+          pnpm install
+          pnpm build
+          cd ../..
+
+          cd packages/dae-lsp
+          pnpm install
+          pnpm build
+          cd ../..
+
+          pnpm install --recursive
+
+          cd apps/web
+          pnpm install
+          pnpm build
+
+      # 3. 准备后端与核心编译环境
+      - name: setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+
+      - name: install clang & dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-15 clang-15 make upx-ucl
+
+      # 4. 终极合体编译
+      - name: build releases
+        id: build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOAMD64: v3
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p release
+          # 进入后端目录，利用 Makefile 打包前端文件生成最终二进制
+          cd wing
+          make APPNAME=${{ env.BINARY }} OUTPUT=../release/${{ env.BINARY }} WEB_DIST=../apps/web/dist CC=clang-15 GOFLAGS="-buildvcs=false" bundle
+
+          # 压缩二进制文件
+          cd ../release
+          upx --lzma ${{ env.BINARY }}
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      # 5. 上传 Artifact (供 Action 页面下载)
+      - name: upload binaries to artifact
+        if: steps.build.outputs.status == 'success' && !cancelled()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
+          path: release/${{ env.BINARY }}
+
+      # 6. 打包 tar.gz 准备 Release
+      - name: prepare release archive
+        if: steps.build.outputs.status == 'success' && !cancelled()
+        run: |
+          cd release
+          tar czf ${{ env.BINARY }}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ env.BINARY }}
+          rm ${{ env.BINARY }}
+
+      # 7. 发布到 GitHub Releases
+      - name: upload binaries to release
+        id: release
+        if: steps.build.outputs.status == 'success' && !cancelled()
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*.tar.gz
+          tag_name: ${{ env.VERSION }} # 注意：确保这里的 Tag 格式与你触发 Action 的条件匹配
+          body: "Automated build for daed release ${{ env.VERSION }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-repo:
+    needs:
+      - check-version
+      - create-release
+      - build-docker-image
+      - build-releases
+    runs-on: ubuntu-latest
+    name: "update repo"
+    env:
+      VERSION: ${{ needs.check-version.outputs.version }}
+      COMMIT: ${{ needs.check-version.outputs.commit }}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.PAT }}
+          fetch-depth: 0
+
+      - name: mark
+        run: |
+          sudo apt-get install -y jq
+
+          git checkout --orphan tmp_work
+          git branch -d main
+
+          sed -i -E 's/(\|\s*${{ env.APP_NAME }}\s*\|)\s*\S+\s*\|/\1 ${{ env.VERSION }} \|/' README.md
+
+          # Update repos.json
+          IFS='/' read -r owner repo <<< "${{ env.GITHUB_REPO }}"
+          jq --arg owner "$owner" --arg repo "$repo" --arg new_version "${{ env.VERSION }}" \
+              'map(if .owner == $owner and .repo == $repo then .version = $new_version else . end)' \
+              .github/workflows/repos.json > update_repos.json
+          mv update_repos.json .github/workflows/repos.json
+
+      - name: upload to repository
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: ${{ env.COMMIT }}
+          create_branch: true
+          branch: main
+          push_options: --force
+
+      - name: delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          delete_workflow_pattern: "${{ env.APP_NAME }}"
+          retain_days: 0
+          keep_minimum_runs: 0
+          delete_run_by_conclusion_pattern: "cancelled, skipped, success"
