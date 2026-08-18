@@ -1,0 +1,67 @@
+# ==========================================
+# 阶段 1：构建前端 Web UI (Node.js 环境)
+# ==========================================
+FROM node:alpine AS web-builder
+ARG BRANCH
+
+# 安装 git 和 pnpm（官方前端推荐使用 pnpm 管理依赖）
+RUN apk add --no-cache git \
+  && npm install -g pnpm
+
+WORKDIR /src
+
+# 深度克隆完整的 daed 仓库（包含 apps/web 前端 和 wing 子模块）
+RUN git clone -b $BRANCH --single-branch --recursive https://github.com/daeuniverse/daed .
+
+# 进入前端工作区，安装依赖并打包静态文件
+RUN cd /src/packages/dae-lang-core && pnpm install && pnpm build \
+  && cd /src/packages/dae-lsp && pnpm install && pnpm build \
+  && cd /src/packages && pnpm install --recursive \
+  && cd /src/apps/web && pnpm install && pnpm build
+
+# ==========================================
+# 阶段 2：编译核心与后端并内嵌前端 (Golang + Clang 环境)
+# ==========================================
+FROM golang:alpine AS bundle-builder
+
+# 安装 eBPF 交叉编译所需的工具链
+RUN apk update && apk add --no-cache git make llvm clang upx linux-headers bash
+
+WORKDIR /src
+
+# 从阶段 1 复制完整的源码（此时 /src/apps/web/dist 中已经有编译好的前端页面）
+COPY --from=web-builder /src /src
+
+WORKDIR /src/wing
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
+ENV CGO_ENABLED=0
+
+# 执行官方的 bundle 编译指令：
+# 1. 编译 C 语言的 eBPF 核心
+# 2. 编译 Go 语言的后端 API
+# 3. 将 WEB_DIST 指向的前端静态文件直接写入（Embed）最终生成的二进制文件中
+RUN make APPNAME=daed OUTPUT=daed WEB_DIST=../apps/web/dist CC=clang GOFLAGS="-buildvcs=false" bundle \
+  && upx --lzma daed
+
+# ==========================================
+# 阶段 3：最终运行环境 (极简 Alpine)
+# ==========================================
+FROM alpine
+
+# 透明代理必要的系统依赖：根证书和时区
+RUN apk add --no-cache ca-certificates tzdata
+
+# 准备系统目录并下载 Geo 路由数据
+RUN mkdir -p /etc/daed /usr/local/share/dae \
+  && wget -O /usr/local/share/dae/geoip.dat https://github.com/v2fly/geoip/releases/latest/download/geoip.dat \
+  && wget -O /usr/local/share/dae/geosite.dat https://github.com/v2fly/domain-list-community/releases/latest/download/dlc.dat
+
+# 将阶段 2 生成的“三合一”二进制文件复制到运行目录
+COPY --from=bundle-builder /src/wing/daed /usr/local/bin/daed
+
+# 暴露 daed Web UI 的默认端口
+EXPOSE 2023
+
+# 启动单体进程，配置目录指向 /etc/daed
+ENTRYPOINT ["daed", "run", "-c", "/etc/daed"]
