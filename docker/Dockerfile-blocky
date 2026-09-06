@@ -18,7 +18,7 @@ WORKDIR /app
 RUN go mod tidy && go mod download
 
 # 创建输出目录
-RUN mkdir -p /release/opt/blocky
+RUN mkdir -p /release/app
 
 # 构建二进制文件
 RUN builtAt="$(date +'%F %T %z')" && \
@@ -31,10 +31,10 @@ RUN builtAt="$(date +'%F %T %z')" && \
     -X 'github.com/0xERR0R/blocky/util.BuildTime=$builtAt' \
     -X 'github.com/0xERR0R/blocky/util.Architecture=General'" && \
     echo "[INFO] 正在构建..." && \
-    go build -v -trimpath -ldflags "$ldflags" -o /release/opt/blocky/blocky .
+    go build -v -trimpath -ldflags "$ldflags" -o /release/app/blocky .
 
 # 压缩二进制文件
-RUN upx --lzma --best /release/opt/blocky/blocky
+RUN upx --lzma --best /release/opt/app
 
 # 输出完成信息
 RUN echo "[INFO] 构建完成。"
@@ -42,12 +42,12 @@ RUN echo "[INFO] 构建完成。"
 FROM alpine:latest
 
 USER 100
-WORKDIR /opt/blocky
+WORKDIR /app
 
 COPY --from=builder /release /
 
-ENV BLOCKY_CONFIG_FILE=/opt/blocky/config.yml
+ENV BLOCKY_CONFIG_FILE=/etc/blocky/config.yml
 
-ENTRYPOINT ["/opt/blocky/blocky"]
+ENTRYPOINT ["/app/blocky"]
 
-HEALTHCHECK --start-period=1m --timeout=3s CMD ["/opt/blocky/blocky", "healthcheck"]
+HEALTHCHECK --start-period=1m --timeout=3s CMD ["/app/blocky", "healthcheck"]
