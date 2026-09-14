@@ -119,6 +119,6 @@ jobs:
           token: ${{ secrets.PAT }}
           repository: ${{ github.repository }}
           delete_workflow_pattern: "trigger"
-          retain_days: 5
-          keep_minimum_runs: 30
+          retain_days: 2
+          keep_minimum_runs: 12
           delete_run_by_conclusion_pattern: "cancelled, skipped, success"
