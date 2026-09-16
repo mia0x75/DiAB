@@ -1,0 +1,58 @@
+FROM alpine:latest AS builder
+ARG BRANCH
+ARG GOAMD64_VERSION=v1
+ENV GOAMD64=$GOAMD64_VERSION
+ENV CGO_ENABLED=0
+
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache bash git go upx
+
+RUN git clone --single-branch -b $BRANCH https://github.com/jonradoff/lightcms /app
+
+WORKDIR /app
+
+# Download dependencies (cached layer unless go.mod/go.sum change)
+RUN go mod tidy && go mod download
+
+# 创建输出目录
+RUN mkdir -p /release/app
+
+# 构建二进制文件
+RUN echo "[INFO] 待构建的版本: $version" && \
+    echo "[INFO] 构建日期: $builtAt" && \
+    ldflags=" -w -s " && \
+    echo "[INFO] 正在构建..." && \
+    go build -v -trimpath -ldflags "$ldflags" -o /release/app/lightcms ./cmd/server
+
+# 压缩二进制文件
+RUN upx --lzma --best /release/app/lightcms
+
+RUN cp -R /app/static /release/app/static \
+    && cp -R /app/build.json /release/app/build.json \
+    && cp -R /app/.well-known /release/app/.well-known \
+    && mkdir -p /release/app/content/generated /release/app/static/uploads
+
+# 输出完成信息
+RUN echo "[INFO] 构建完成。"
+
+FROM alpine:latest
+
+RUN set -ex \
+  && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
+  && apk update \
+  && apk upgrade \
+  && apk add --no-cache ca-certificates curl gnupg \
+  && rm -rf /var/cache/apk/*
+
+USER 100
+WORKDIR /app
+
+COPY --from=builder /release /
+
+# Expose port
+EXPOSE 8082
+
+CMD ["/app/lightcms"]
