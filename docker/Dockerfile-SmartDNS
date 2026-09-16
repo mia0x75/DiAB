@@ -50,8 +50,7 @@ RUN set -ex && \
 
 # Step 5: 压缩二进制文件
 RUN set -ex && \
-    upx --best --lzma /release/usr/sbin/smartdns && \
-    upx --best --lzma /release/usr/lib/smartdns_ui.so
+    upx --best --lzma /release/usr/sbin/smartdns
 
 # Step 6: 示例配置
 RUN cat > /release/etc/smartdns/smartdns.conf <<EOF
