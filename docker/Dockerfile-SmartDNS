@@ -38,22 +38,68 @@ RUN set -ex && \
 
 # Step 3: 准备发布目录
 RUN set -ex && \
-    mkdir -p /release/var/log /release/run
+    mkdir -p /release/var/log /release/run /release/usr/sbin /release/lib /release/wwwroot /release/etc/smartdns
 
-# Step 4: 复制配置文件
+# Step 4: 复制二进制文件
 RUN set -ex && \
-    cp package/smartdns/etc /release/ -a
+    cp package/smartdns/usr/sbin/smartdns /release/usr/sbin/ -a && \
+    cp package/smartdns/usr/local/lib/smartdns/smartdns_ui.so /release/lib -a
 
-# Step 5: 复制二进制文件
+# Step 5: 压缩二进制文件
 RUN set -ex && \
-    cp package/smartdns/usr /release/ -a
+    upx --best --lzma /release/usr/sbin/smartdns && \
+    upx --best --lzma /release/usr/lib/smartdns_ui.so
 
-# Step 6: 压缩二进制文件
+# Step 6: 下载并部署 smartdns-webui
 RUN set -ex && \
-    upx --best /release/usr/sbin/smartdns
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/pymumu/smartdns-webui/releases/latest) && \
+    DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -o '"browser_download_url"[^,]*' | grep -o 'http[^"]*' | head -1) && \
+    if [ -z "$DOWNLOAD_URL" ]; then \
+      echo "Failed to get download URL from latest release" && \
+      exit 1; \
+    fi && \
+    echo "Downloading from: $DOWNLOAD_URL" && \
+    cd /tmp && \
+    curl -L -o smartdns-webui.tar.gz "$DOWNLOAD_URL" && \
+    tar -xzf smartdns-webui.tar.gz -C /release/wwwroot && \
+    rm -f smartdns-webui.tar.gz
 
-# Step 7: 复制插件
-# COPY --from=plugin /build/smartdns_ui.so /release/usr/sbin/
+# Step 7: 示例配置
+cat > /release/etc/smartdns/smartdns.conf <<EOF
+bind 0.0.0.0:53
+
+server 223.5.5.5
+server 119.29.29.29
+server 1.1.1.1
+
+server-https https://dns.alidns.com/dns-query
+server-https https://doh.pub/dns-query
+server-https https://cloudflare-dns.com/dns-query
+
+cache-size 50000
+cache-persist yes
+cache-file /var/lib/smartdns.cache
+local-ttl 120
+
+force-qtype-SOA 65
+log-level info
+log-size 128K
+
+# Enable dashboard plugin
+plugin /usr/lib/smartdns_ui.so
+
+# Dashboard plugin config
+smartdns-ui.ip http://[::]:6080
+
+smartdns-ui.www-root /wwwroot
+smartdns-ui.token-expire 86400
+smartdns-ui.user admin
+smartdns-ui.password admin
+
+smartdns-ui.max-query-log-age 6048000
+smartdns-ui.enable-terminal yes
+data-dir /var/lib/smartdns
+EOF
 
 # Step 8: 清理构建目录
 RUN rm -rf /build
