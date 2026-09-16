@@ -22,6 +22,7 @@ WORKDIR /build/smartdns
 
 # Step 1: 执行构建脚本
 RUN set -ex && \
+    npm config set allow-remote true && \
     if [ "$TARGETARCH" = "amd64" ]; then \
       ARCH_NAME="x86_64"; \
     else \
