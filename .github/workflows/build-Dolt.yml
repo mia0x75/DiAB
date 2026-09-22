@@ -221,8 +221,16 @@ jobs:
 
           cd "$GITHUB_WORKSPACE/icu-host-source/source"
 
+          unset CC CXX AR RANLIB LD STRIP
+
           ./configure \
+            --build="$(gcc -dumpmachine)" \
+            --host="$(gcc -dumpmachine)" \
             --prefix="$GITHUB_WORKSPACE/icu-host" \
+            CC=/usr/bin/gcc \
+            CXX=/usr/bin/g++ \
+            AR=/usr/bin/ar \
+            RANLIB=/usr/bin/ranlib \
             --enable-static \
             --disable-shared \
             --disable-tests \
@@ -233,15 +241,18 @@ jobs:
     
           cd "$GITHUB_WORKSPACE/icu-target-source/source"
 
+          "$TARGET_CC" --version
+          "$TARGET_CXX" --version
+
           ./configure \
             --build="$(gcc -dumpmachine)" \
-            --host="$(gcc -dumpmachine)" \
+            --host="$TARGET_TRIPLET" \
             --with-cross-build="$GITHUB_WORKSPACE/icu-host-source/source" \
             --prefix="$GITHUB_WORKSPACE/icu-target" \
-            CC="${TARGET_CC}" \
-            CXX="${TARGET_CXX}" \
-            AR="${TARGET_AR}" \
-            RANLIB="${TARGET_RANLIB}" \
+            CC="$TARGET_CC" \
+            CXX="$TARGET_CXX" \
+            AR="$TARGET_AR" \
+            RANLIB="$TARGET_RANLIB" \
             --enable-static \
             --disable-shared \
             --disable-tests \
