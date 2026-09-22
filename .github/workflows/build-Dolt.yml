@@ -186,7 +186,7 @@ jobs:
       - name: musl cross compile setup
         run: |
           aria2c -x 16 -s 16 -o ${{ matrix.file }} "https://musl.nn.ci/${{ matrix.file }}"
-          tar xf ${{ matrix.file }} --strip-components 1 -C /usr/local
+          sudo tar xf ${{ matrix.file }} --strip-components 1 -C /usr/local
           
       - name: Build ICU for ${{ matrix.goarch }}
         env:
