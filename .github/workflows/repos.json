@@ -6,7 +6,7 @@
     "type": 2,
     "test": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
     "replace": "",
-    "version": "v2.3.5"
+    "version": "v2.3.4"
   },
   {
     "owner": "Amm1rr",
