@@ -156,13 +156,15 @@ jobs:
         goarch: [amd64, arm64]
         include:
           - goarch: amd64
-            goos: linux
-            runner: ubuntu-26.04
+            file: x86_64-linux-musl-cross.tgz
+            cc: x86_64-linux-musl-gcc
+            triplet: x86_64-linux-musl
           - goarch: arm64
-            goos: linux
-            runner: ubuntu-26.04-arm
+            file: aarch64-linux-musl-cross.tgz
+            cc: aarch64-linux-musl-gcc
+            triplet: aarch64-linux-musl
             
-    runs-on: ${{ matrix.runner }}    
+    runs-on: ubuntu-latest
     
     steps:
       - name: checkout repository
@@ -178,11 +180,55 @@ jobs:
       - name: initialize environment
         run: |
           sudo apt-get -qq update --fix-missing
-          sudo apt-get install -y build-essential git upx libicu-dev
+          sudo apt-get install -y build-essential git upx libicu-dev \
+               musl-tools aria2 musl-dev
+
+      - name: musl cross compile setup
+        run: |
+          aria2c -x 16 -s 16 -o ${{ matrix.file }} "https://musl.nn.ci/${{ matrix.file }}"
+          tar xf ${{ matrix.file }} --strip-components 1 -C /usr/local
+          
+      - name: Build ICU for ${{ matrix.goarch }}
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.triplet }}-g++
+          AR: ${{ matrix.triplet }}-ar
+          RANLIB: ${{ matrix.triplet }}-ranlib
+          STRIP: ${{ matrix.triplet }}-strip
+          TARGET_TRIPLET: ${{ matrix.triplet }}
+        run: |
+          set -euxo pipefail
+
+          ICU_VERSION=78.3
+          curl -fL -o icu.tgz \
+            "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION//./-}/icu4c-${ICU_VERSION//./_}-src.tgz"
+
+          tar xf icu.tgz
+          cd icu/source
+
+          ./configure \
+            --build="$(gcc -dumpmachine)" \
+            --host="${TARGET_TRIPLET}" \
+            --prefix=/opt/icu \
+            CC="${CC}" \
+            CXX="${CXX}" \
+            AR="${AR}" \
+            RANLIB="${RANLIB}" \
+            --enable-static \
+            --disable-shared \
+            --disable-tests \
+            --disable-samples
+
+          make -j"$(nproc)"
+          make install
+
+          echo "CGO_CFLAGS=-I/opt/icu/include" >> "$GITHUB_ENV"
+          echo "CGO_CPPFLAGS=-I/opt/icu/include" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L/opt/icu/lib -licui18n -licuuc -licudata -lpthread -lm -ldl" >> "$GITHUB_ENV"
 
       - name: clone repository
         run: |
-          git clone https://github.com/dolthub/dolt dolthub/dolt
+          git clone -b ${{ env.VERSION }} --single-branch https://github.com/dolthub/dolt dolthub/dolt
 
       - name: build application
         id: build
@@ -191,12 +237,23 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 1
           GOAMD64: v3
-          CC: gcc
+          CC: ${{ matrix.cc }}
+          PKG_CONFIG_PATH: /opt/icu/lib/pkgconfig
+          PKG_CONFIG_LIBDIR: /opt/icu/lib/pkgconfig
         run: |
+          set -euxo pipefail
+
           cd dolthub/dolt/go
-          go build -v -trimpath -ldflags "-w -s" -o release/dolt ./cmd/dolt
+
+          go build \
+            -v \
+            -trimpath \
+            -ldflags "-linkmode external -extldflags '-static' -w -s" \
+            -o release/dolt \
+            ./cmd/dolt
+
           upx --best --lzma release/dolt
-          echo "status=success" >> $GITHUB_OUTPUT
+          echo "status=success" >> "$GITHUB_OUTPUT"
 
       - name: upload binaries to artifact
         if: steps.build.outputs.status == 'success' && !cancelled()
