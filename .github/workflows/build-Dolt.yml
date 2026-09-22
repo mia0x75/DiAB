@@ -235,7 +235,7 @@ jobs:
 
           ./configure \
             --build="$(gcc -dumpmachine)" \
-            --host="${TARGET_TRIPLET}" \
+            --host="$(gcc -dumpmachine)" \
             --with-cross-build="$GITHUB_WORKSPACE/icu-host-source/source" \
             --prefix="$GITHUB_WORKSPACE/icu-target" \
             CC="${TARGET_CC}" \
