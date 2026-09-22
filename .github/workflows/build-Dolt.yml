@@ -203,17 +203,45 @@ jobs:
           curl -fL -o icu.tgz \
             "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION}/icu4c-${ICU_VERSION}-sources.tgz"
 
-          tar xf icu.tgz
-          cd icu/source
+          rm -rf "$GITHUB_WORKSPACE/icu-host-source"
+          rm -rf "$GITHUB_WORKSPACE/icu-target-source"
+          rm -rf "$GITHUB_WORKSPACE/icu-host"
+          rm -rf "$GITHUB_WORKSPACE/icu-target"
+
+          mkdir -p "$GITHUB_WORKSPACE/icu-host-source"
+          mkdir -p "$GITHUB_WORKSPACE/icu-target-source"
+
+          tar xzf icu.tgz \
+            --strip-components=1 \
+            -C "$GITHUB_WORKSPACE/icu-host-source"
+
+          tar xzf icu.tgz \
+            --strip-components=1 \
+            -C "$GITHUB_WORKSPACE/icu-target-source"
+
+          cd "$GITHUB_WORKSPACE/icu-host-source/source"
+
+          ./configure \
+            --prefix="$GITHUB_WORKSPACE/icu-host" \
+            --enable-static \
+            --disable-shared \
+            --disable-tests \
+            --disable-samples
+
+          make -j"$(nproc)"
+          make install
+    
+          cd "$GITHUB_WORKSPACE/icu-target-source/source"
 
           ./configure \
             --build="$(gcc -dumpmachine)" \
             --host="${TARGET_TRIPLET}" \
-            --prefix=/opt/icu \
-            CC="${CC}" \
-            CXX="${CXX}" \
-            AR="${AR}" \
-            RANLIB="${RANLIB}" \
+            --with-cross-build="$GITHUB_WORKSPACE/icu-host-source/source" \
+            --prefix="$GITHUB_WORKSPACE/icu-target" \
+            CC="${TARGET_CC}" \
+            CXX="${TARGET_CXX}" \
+            AR="${TARGET_AR}" \
+            RANLIB="${TARGET_RANLIB}" \
             --enable-static \
             --disable-shared \
             --disable-tests \
@@ -222,9 +250,11 @@ jobs:
           make -j"$(nproc)"
           make install
 
-          echo "CGO_CFLAGS=-I/opt/icu/include" >> "$GITHUB_ENV"
-          echo "CGO_CPPFLAGS=-I/opt/icu/include" >> "$GITHUB_ENV"
-          echo "CGO_LDFLAGS=-L/opt/icu/lib -licui18n -licuuc -licudata -lpthread -lm -ldl" >> "$GITHUB_ENV"
+          echo "CGO_CFLAGS=-I$GITHUB_WORKSPACE/icu-target/include" >> "$GITHUB_ENV"
+          echo "CGO_CPPFLAGS=-I$GITHUB_WORKSPACE/icu-target/include" >> "$GITHUB_ENV"
+          echo "CGO_LDFLAGS=-L$GITHUB_WORKSPACE/icu-target/lib -licui18n -licuuc -licudata" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$GITHUB_WORKSPACE/icu-target/lib/pkgconfig" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_LIBDIR=$GITHUB_WORKSPACE/icu-target/lib/pkgconfig" >> "$GITHUB_ENV"
 
       - name: clone repository
         run: |
@@ -238,8 +268,9 @@ jobs:
           CGO_ENABLED: 1
           GOAMD64: v3
           CC: ${{ matrix.cc }}
-          PKG_CONFIG_PATH: /opt/icu/lib/pkgconfig
-          PKG_CONFIG_LIBDIR: /opt/icu/lib/pkgconfig
+          CXX: ${{ matrix.triplet }}-g++
+          AR: ${{ matrix.triplet }}-ar
+          RANLIB: ${{ matrix.triplet }}-ranlib
         run: |
           set -euxo pipefail
 
