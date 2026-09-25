@@ -240,7 +240,7 @@ jobs:
         run: |
           ls -lah
           cd dist
-          tar czf sing-box-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz sing-box
+          tar czf sing-box-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}.tar.gz sing-box
           rm sing-box
 
       - name: upload binaries to release
