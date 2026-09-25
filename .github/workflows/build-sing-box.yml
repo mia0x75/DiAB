@@ -219,7 +219,7 @@ jobs:
         run: |
           mkdir -p dist
           go build \
-            -trimpath \                   
+            -trimpath \
             -tags "with_tailscale,with_gvisor,with_quic,with_dhcp,with_wireguard,with_utls,with_acme,with_clash_api,with_v2ray_api,with_grpc" \
             -ldflags "-s -w -X github.com/sagernet/sing-box/constant.Version=${VERSION}" \
             -o "dist/sing-box-${{ matrix.goos }}-${{ matrix.goarch }}" \
