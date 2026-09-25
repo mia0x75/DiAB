@@ -232,12 +232,13 @@ jobs:
         if: steps.build.outputs.status == 'success' && !cancelled()
         uses: actions/upload-artifact@v7
         with:
-          name: dist-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
+          name: sing-box-${{ matrix.goos }}-${{ matrix.goarch }}-${{ env.VERSION }}
           path: dist/
 
       - name: prepare release
         if: steps.build.outputs.status == 'success' && !cancelled()
         run: |
+          ls -lah
           cd dist
           tar czf sing-box-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz sing-box
           rm sing-box
