@@ -1,0 +1,165 @@
+FROM python:3.12-slim-trixie AS builder
+
+ARG BRANCH=main
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    VIRTUAL_ENV=/release/opt/venv \
+    PATH="/release/opt/venv/bin:$PATH"
+
+WORKDIR /release
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        git \
+        gcc \
+        g++ \
+        make \
+        libffi-dev \
+        libssl-dev \
+        libglib2.0 \
+        ca-certificates \
+        curl \
+        grep \
+        fonts-liberation \
+        fonts-noto-color-emoji \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libatspi2.0 \
+        libcups2 \
+        libdrm2 \
+        libdbus-1-3 \
+        libx11-6 \
+        libxext6 \
+        libxcb1 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libasound2 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libatspi2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN test -n "$BRANCH" \
+    && git clone \
+        --depth 1 \
+        --branch "$BRANCH" \
+        --single-branch \
+        https://github.com/Amm1rr/WebAI-to-API.git \
+        /release/source \
+    && rm -rf /release/source/.git \
+    && rm -rf /release/source/.github \
+    && rm -rf /release/source/assets \
+    && rm -rf /release/source/docs \
+    && rm -rf /release/source/issues \
+    && rm -rf /release/source/openspec \
+    && rm -rf /release/source/tests \
+    && rm -rf /release/source/.dockerignore \
+    && rm -rf /release/source/.env.example \
+    && rm -rf /release/source/.gitignore \
+    && rm -rf /release/source/AGENTS.md \
+    && rm -rf /release/source/Changelog.md \
+    && rm -rf /release/source/Dockerfile \
+    && rm -rf /release/source/LICENSE \
+    && rm -rf /release/source/Makefile \
+    && rm -rf /release/source/README.md \
+    && rm -rf /release/source/config.conf.example \
+    && rm -rf /release/source/docker-compose.override.yml \
+    && rm -rf /release/source/docker-compose.yml \
+    && rm -rf /release/source/install.ps1 \
+    && rm -rf /release/source/install.sh \
+    && rm -rf /release/source/update-linux-macos.sh \
+    && rm -rf /release/source/update-windows.cmd
+
+WORKDIR /release/source
+
+RUN python -m venv "$VIRTUAL_ENV" \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && mkdir -p /release/ms-playwright \
+    && PLAYWRIGHT_BROWSERS_PATH=/release/ms-playwright \
+       python -m playwright install chromium
+
+RUN mv /release/source /release/app
+
+FROM python:3.12-slim-trixie AS dist
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/src \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH" \
+    HOME=/home/app \
+    RUNTIME_DIR=/app/runtime \
+    PLAYWRIGHT_HEADLESS=true \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+WORKDIR /app
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libglib2.0 \
+        ca-certificates \
+        fonts-liberation \
+        libnss3 \
+        libnspr4 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdrm2 \
+        libdbus-1-3 \
+        libx11-6 \
+        libxext6 \
+        libxcb1 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libgbm1 \
+        libasound2 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libatspi2.0-0 \
+        libxshmfence1 \
+        libx11-xcb1 \
+        libxcursor1 \
+        libxi6 \
+        libxtst6 \
+        libxrender1 \
+        libxss1 \
+        libfontconfig1 \
+        libfreetype6 \
+        libexpat1 \
+        libpangocairo-1.0-0 \
+        xdg-utils \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 app \
+    && useradd \
+        --uid 10001 \
+        --gid 10001 \
+        --create-home \
+        --home-dir /home/app \
+        --shell /usr/sbin/nologin \
+        app \
+    && mkdir -p /app/runtime /ms-playwright \
+    && chown -R app:app /app /home/app /ms-playwright
+
+COPY --from=builder --chown=app:app /release /
+
+USER app
+
+EXPOSE 6969
+
+ENTRYPOINT ["python", "src/run.py"]
+
+CMD ["--host", "0.0.0.0", "--port", "6969"]
