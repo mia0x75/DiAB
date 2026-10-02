@@ -1,0 +1,16 @@
+FROM alpine:latest AS builder
+
+RUN apk add --no-cache ca-certificates wget \
+    && wget -O /paperly https://git.hbox.de5.net/mxu/paperly-docs/raw/branch/main/paperly \
+    && chmod +x /paperly
+
+FROM alpine:latest AS dist
+
+RUN apk add --no-cache \
+        bash \
+        tzdata \
+        ca-certificates
+
+COPY --from=builder /paperly /app/paperly
+
+ENTRYPOINT ["/app/paperly"]
