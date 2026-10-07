@@ -40,7 +40,7 @@ RUN set -ex \
   && env NODE_OPTIONS=--openssl-legacy-provider yarn build \
   && cd /go/src/github.com/gotify/server \
   && go build -mod=readonly -a -installsuffix cgo -v -trimpath -ldflags "--extldflags '-static -fpic' -w -s -buildid=" -o release/gotify app.go \
-  && upx --lzma /go/src/github.com/gotify/server/release/gotify \
+  && upx -1 /go/src/github.com/gotify/server/release/gotify \
   && mkdir /release \
   && cp /go/src/github.com/gotify/server/release/gotify /release
 

@@ -233,7 +233,7 @@ jobs:
         run: |
           cd ${{ env.GITHUB_REPO }}
           go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -o release/${{ env.BINARY }} .
-          upx --lzma release/${{ env.BINARY }}
+          upx -1 release/${{ env.BINARY }}
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: upload binaries to artifact

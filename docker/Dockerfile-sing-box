@@ -39,7 +39,7 @@ RUN set -ex \
     -o /go/bin/sing-box \
     -ldflags "-X \"github.com/sagernet/sing-box/constant.Version=$VERSION\" -s -w -buildid=" \
     ./cmd/sing-box \
-  && upx --lzma /go/bin/sing-box
+  && upx -1 /go/bin/sing-box
 
 FROM alpine AS dist
 RUN set -ex \

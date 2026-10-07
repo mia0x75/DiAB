@@ -14,7 +14,7 @@ RUN set -ex \
   && apk --no-cache add git build-base upx ca-certificates \
   && git clone -b $BRANCH --single-branch https://github.com/xmdhs/clash2sfa /go/src/github.com/xmdhs/clash2sfa \
   && go build -v -trimpath -o /go/bin/clash2sfa -ldflags "-w -s -buildid=" . \
-  && upx --lzma /go/bin/clash2sfa
+  && upx -1 /go/bin/clash2sfa
 
 FROM --platform=$TARGETPLATFORM alpine AS dist
 RUN set -ex \

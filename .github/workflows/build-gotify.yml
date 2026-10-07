@@ -225,7 +225,7 @@ jobs:
           NODE_OPTIONS=--openssl-legacy-provider yarn build
           cd ..
           go build -mod=readonly -a -installsuffix cgo -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -o release/${{ env.BINARY }} app.go
-          upx --lzma release/gotify
+          upx -1 release/gotify
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: upload binaries to artifact

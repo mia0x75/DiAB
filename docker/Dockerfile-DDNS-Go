@@ -14,7 +14,7 @@ RUN set -ex \
   && apk add git build-base make tzdata upx \
   && git clone -b $BRANCH --single-branch https://github.com/jeessy2/ddns-go /go/src/github.com/jeessy2/ddns-go \
   && make clean build \
-  && upx --lzma /go/src/github.com/jeessy2/ddns-go/ddns-go \
+  && upx -1 /go/src/github.com/jeessy2/ddns-go/ddns-go \
   && mkdir /app \
   && cp /go/src/github.com/jeessy2/ddns-go/ddns-go /app
 

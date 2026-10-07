@@ -48,7 +48,7 @@ RUN set -ex \
   && go build -v -trimpath -ldflags "$ldflags" -tags=jsoniter -o /release/opt/openlist/openlist . \
   && mkdir -p /release/opt/openlist/data \
   && cp entrypoint.sh /release/ \
-  && upx --lzma --best /release/opt/openlist/openlist \
+  && upx -1 /release/opt/openlist/openlist \
   && echo "[INFO] Build completed successfully"
 
 FROM alpine:latest

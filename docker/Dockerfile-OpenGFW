@@ -16,7 +16,7 @@ RUN set -ex \
   && go build -v -trimpath \
     -o /release/openGFW \
     -ldflags "-s -w -buildid=" \
-  && upx --lzma /release/openGFW
+  && upx -1 /release/openGFW
 COPY ./extras/OpenGFW-config.yml /release/config.yml
 COPY ./extras/OpenGFW-rules.yml /release/rules.yml
 

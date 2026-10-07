@@ -17,7 +17,7 @@ RUN set -ex \
   && go build -v -trimpath -ldflags "-X \"github.com/apernet/hysteria/app/v2/cmd.appVersion=${releaseVersion}\" -X \"github.com/apernet/hysteria/app/v2/cmd.appCommit=${gitCommit}\" -X \"github.com/apernet/hysteria/app/v2/cmd.appDate=${buildDate}\" -X \"github.com/apernet/hysteria/app/v2/cmd.appType=release\" -X \"github.com/apernet/hysteria/app/v2/cmd.appPlatform=${TARGETOS}\" -X \"github.com/apernet/hysteria/app/v2/cmd.appArch=${TARGETARCH}\" -s -w -buildid=" \
       -o /go/bin/hysteria \
       ./app \
-  && upx --lzma /go/bin/hysteria
+  && upx -1 /go/bin/hysteria
 
 FROM --platform=$TARGETPLATFORM alpine AS dist
 # bash is used for debugging, tzdata is used to add timezone information.

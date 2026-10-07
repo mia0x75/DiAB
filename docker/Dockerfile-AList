@@ -58,7 +58,7 @@ RUN set -ex \
   && mkdir /release/opt/alist/data -p \
   && cp alist /release/opt/alist/ \
   && cp entrypoint.sh /release/ \
-  && upx --lzma /release/opt/alist/alist
+  && upx -1 /release/opt/alist/alist
 
 FROM --platform=$TARGETPLATFORM alpine AS dist
 

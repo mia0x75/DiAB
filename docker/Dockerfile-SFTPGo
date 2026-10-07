@@ -43,12 +43,12 @@ RUN set -ex \
      -X 'github.com/drakkan/sftpgo/v2/internal/version.commit=${COMMIT_SHA}' \
      -X 'github.com/drakkan/sftpgo/v2/internal/version.date=`date -u +%FT%TZ`'" \
   && go build -v -trimpath -ldflags "--extldflags '-static -fpic' $ldflags" -o /release/usr/local/bin/sftpgo \
-  && upx --lzma /release/usr/local/bin/sftpgo \
+  && upx -1 /release/usr/local/bin/sftpgo \
   && mkdir -p /release/etc/sftpgo /release/var/lib/sftpgo /release/usr/share/sftpgo /release/srv/sftpgo/data /release/srv/sftpgo/backups \
   && cp sftpgo.json /release/etc/sftpgo/sftpgo.json \
   && cp -R templates /release/usr/share/sftpgo/templates \
   && cp -R static /release/usr/share/sftpgo/static \
-  && cp -R openapi /release/usr/share/sftpgo/openapi  
+  && cp -R openapi /release/usr/share/sftpgo/openapi
 
 FROM alpine:3.20
 

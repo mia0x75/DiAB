@@ -35,7 +35,7 @@ RUN set -ex \
   && rm -f ${FILE} \
   && git clone -b $BRANCH --single-branch https://github.com/ghostunnel/ghostunnel /go/src/github.com/ghostunnel/ghostunnel \
   && go build -tags !nopkcs11 -v -trimpath -ldflags "-X \"main.version=${BRANCH}\" -s -w -buildid=" -o /release/ghostunnel \
-  && upx --lzma /release/ghostunnel
+  && upx -1 /release/ghostunnel
 
 FROM --platform=$TARGETPLATFORM alpine AS dist
 

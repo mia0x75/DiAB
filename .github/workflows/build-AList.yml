@@ -254,7 +254,7 @@ jobs:
         run: |
           cd alist-org/alist
           go build -v -trimpath -ldflags "--extldflags '-static -fpic' ${{ env.ldflags }}" -tags=jsoniter -o release/alist
-          upx --lzma release/alist
+          upx -1 release/alist
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: upload binaries to artifact

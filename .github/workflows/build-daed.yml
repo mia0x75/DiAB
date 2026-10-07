@@ -232,7 +232,7 @@ jobs:
 
           # 压缩二进制文件
           cd ../release
-          upx --lzma ${{ env.BINARY }}
+          upx -1 ${{ env.BINARY }}
           echo "status=success" >> $GITHUB_OUTPUT
 
       # 5. 上传 Artifact (供 Action 页面下载)

@@ -16,7 +16,7 @@ RUN set -ex \
   && go generate ./... \
   && mkdir -p /mediamtx \
   && go build -o /mediamtx/mediamtx \
-  && upx --lzma /mediamtx/mediamtx \
+  && upx -1 /mediamtx/mediamtx \
   && cp mediamtx.yml /mediamtx
 
 FROM --platform=$TARGETPLATFORM alpine AS dist

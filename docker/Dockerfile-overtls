@@ -41,7 +41,7 @@ RUN set -ex \
   && git clone -b $BRANCH --single-branch https://github.com/shadowsocksr-live/overtls . \
   && RUSTFLAGS="-C linker=${CC}" CC=${CC} cargo build --release --all-features --target=${CARGO_TARGET} \
   && cbindgen -c cbindgen.toml -l C --cpp-compat -o ./overtls.h \
-  && upx --lzma target/${CARGO_TARGET}/release/overtls-bin \
+  && upx -1 target/${CARGO_TARGET}/release/overtls-bin \
   && mkdir -p target/${TARGETPLATFORM} \
   && cp target/${CARGO_TARGET}/release/overtls-bin target/${TARGETPLATFORM}/overtls \
   && ls -lah target/${CARGO_TARGET}/release/overtls-bin \
@@ -64,7 +64,7 @@ RUN set -ex \
   && apk add bash tzdata ca-certificates \
   && rm -rf /var/cache/apk/* \
   && mkdir /app
-  
+
 # 从构建阶段复制生成的二进制文件
 COPY --from=builder /build/. /app
 

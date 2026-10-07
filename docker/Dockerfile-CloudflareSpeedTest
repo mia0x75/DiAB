@@ -17,7 +17,7 @@ RUN set -ex \
   && go build -v -trimpath \
     -o /release/CloudflareSpeedTest \
     -ldflags "-s -w -buildid= -X main.version=$VERSION" \
-  && upx --lzma /release/CloudflareSpeedTest \
+  && upx -1 /release/CloudflareSpeedTest \
   && cp *.txt /release/
 
 FROM --platform=$TARGETPLATFORM alpine AS dist

@@ -14,7 +14,7 @@ RUN set -ex \
   && apk add git upx \
   && git clone -b $BRANCH --single-branch https://github.com/projectdiscovery/proxify /go/src/github.com/projectdiscovery/proxify \
   && go build -v -trimpath -ldflags "-s -w -buildid=" -o /release/proxify ./cmd/proxify \
-  && upx --lzma /release/proxify
+  && upx -1 /release/proxify
 
 FROM --platform=$TARGETPLATFORM alpine AS dist
 

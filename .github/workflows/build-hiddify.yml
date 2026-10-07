@@ -242,7 +242,7 @@ jobs:
             ./cmd/main
 
           echo "Compressing binary with UPX..."
-          upx --lzma release/${{ env.BINARY }}
+          upx -1 release/${{ env.BINARY }}
 
           echo "Build completed successfully"
           echo "status=success" >> $GITHUB_OUTPUT

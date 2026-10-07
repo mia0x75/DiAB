@@ -208,7 +208,7 @@ jobs:
         run: |
           cd ghostunnel/ghostunnel
           go build -v -trimpath -tags !nopkcs11 -ldflags "--extldflags '-static -fpic' -w -s -buildid= -X \"main.version=${{ env.VERSION }}\"" -o release/ghostunnel
-          upx --lzma release/ghostunnel
+          upx -1 release/ghostunnel
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: upload binaries to artifact
