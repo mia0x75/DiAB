@@ -42,7 +42,7 @@ jobs:
         uses: docker/build-push-action@v7
         env:
           DOCKERHUB_REPOSITORY: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}
-          VERSION: "v1.1.0"
+          VERSION: "v1.0.0"
         with:
           push: true
           file: docker/${{ env.DOCKER_FILE }}
