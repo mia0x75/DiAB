@@ -33,9 +33,6 @@ RUN builtAt="$(date +'%F %T %z')" && \
     echo "[INFO] 正在构建..." && \
     go build -v -trimpath -ldflags "$ldflags" -o /release/app/blocky .
 
-# 压缩二进制文件
-RUN upx --lzma --best /release/opt/app
-
 # 输出完成信息
 RUN echo "[INFO] 构建完成。"
 
